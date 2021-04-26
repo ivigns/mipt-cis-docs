@@ -1,0 +1,24 @@
+---
+# https://go.chriswarrick.com/pyweb
+- name: Install nginx and uWSGI for a Python web application (pyweb)
+  hosts: nginx_uwsgi
+  become: yes
+  become_user: root
+
+# talk to all hosts just so we can learn about them
+- hosts: all
+  tasks:
+     - group_by: key=os_{{ ansible_distribution }}
+
+- hosts: os_Debian:os_Ubuntu
+  gather_facts: False
+  become: yes
+  become_user: root
+  roles:
+     - install_Debian_Ubuntu
+     - setup_venv_app
+     - patch_config_Debian_Ubuntu
+     - configure_nginx_uwsgi
+     - create_service_Debian_Ubuntu
+     - start_services
+

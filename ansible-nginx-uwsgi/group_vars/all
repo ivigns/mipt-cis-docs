@@ -1,0 +1,25 @@
+---
+app_name: myapp
+app_package: flaskapp
+app_callable: app
+base_dir: '/srv/{{ app_name }}'
+venv_dir: '{{ base_dir }}/venv'
+appdata_dir: '{{ base_dir }}/appdata'
+nginx_server_name: 'localhost {{ app_name }}.local'
+# This affects HTTP only. HTTPS requires manual config.
+# Most people want to use 80 here.
+nginx_http_port: 80
+uwsgi_module: '{{ app_package }}:{{ app_callable }}'
+uwsgi_processes: 1
+uwsgi_threads: 1
+uwsgi_env: []
+# Example for Django:
+# uwsgi_env:
+# - 'DJANGO_SETTINGS_MODULE={{ app_package }}.settings'
+git_repo: https://github.com/Kwpolska/flask-demo-app
+git_branch: master
+# If this is set to "yes", the global nginx config will be replaced by one
+# that has no default hosts. This is based on the default config of your OS.
+# You should not use it if you customized /etc/nginx/nginx.conf in any way,
+# or if you have already used nginx before.
+nginx_hostless_global_config: no
