@@ -1,0 +1,13 @@
+---
+postgres_docker_image: postgres
+postgres_docker_image_tag: 9.5
+postgres_container_name: 'postgres'
+postgres_port: 5432
+
+postgres_networks: null
+container_memory_limit: null
+
+# Optional
+# postgres_user: db_user
+# postgres_password: db_password
+# postgres_database: my_db

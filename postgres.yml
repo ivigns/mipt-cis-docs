@@ -1,0 +1,9 @@
+- hosts: all
+  become: true
+  roles:
+    - role: ansible-docker-postgres
+      tags: ['database']
+      postgres_port: 5432
+      postgres_user: 'db_user'
+      postgres_password: 'db_password' # better put to Vault
+      postgres_database: 'my_db'

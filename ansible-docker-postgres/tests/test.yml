@@ -1,0 +1,10 @@
+---
+- hosts: localhost
+  connection: local
+  roles:
+    - role: ../..
+      postgres_container_name: 'test-postgres'
+      postgres_user: 'test_user'
+      postgres_password: 'test_password'
+      postgres_database: 'test_db'
+      postgres_port: '5678'

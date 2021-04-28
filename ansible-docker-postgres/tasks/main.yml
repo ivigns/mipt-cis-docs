@@ -1,0 +1,81 @@
+- name: Install aptitude using apt
+  apt: name=aptitude state=latest update_cache=yes force_apt_get=yes
+
+- name: Install required system packages
+  apt: name={{ item }} state=latest update_cache=yes
+  loop: [ 'apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common', 'python3-pip', 'virtualenv', 'python3-setuptools', 'python3-psycopg2']
+
+- name: Add Docker GPG apt Key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add Docker Repository
+  apt_repository:
+    repo: deb https://download.docker.com/linux/ubuntu bionic stable
+    state: present
+
+- name: Update apt and install docker-ce
+  apt: update_cache=yes name=docker-ce state=latest
+
+- name: Install Docker Module for Python
+  pip:
+    name: docker
+
+- name: Pull PostgreSQL image
+  docker_image:
+    name: '{{ postgres_docker_image }}'
+    tag: '{{ postgres_docker_image_tag }}'
+    source: pull
+
+- name: Create data container
+  docker_container:
+    name: '{{ postgres_container_name }}-data'
+    image: '{{ postgres_docker_image }}:{{ postgres_docker_image_tag }}'
+    state: present
+
+- name: Run PostgreSQL container
+  docker_container:
+    name: '{{ postgres_container_name }}'
+    image: '{{ postgres_docker_image }}:{{ postgres_docker_image_tag }}'
+    restart_policy: always
+    state: started
+    memory: '{{ container_memory_limit | default(omit) }}'
+    volumes_from:
+      - '{{ postgres_container_name }}-data'
+    ports:
+      - '{{ postgres_port }}:5432'
+    networks: '{{ postgres_networks }}'
+  register: postgres_container
+
+- name: Wait until PostgreSQL starts up
+  wait_for: port={{ postgres_port }} delay=5
+  when: postgres_container.changed
+
+# install pg tools when on debian-based systems
+- name: Ensure db client packages are installed (Debian/Ubuntu)
+  apt: name={{item}} state=present
+  with_items:
+    - postgresql
+    - libpq-dev
+    - python3-psycopg2
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+- name: Create {{ postgres_user }} user
+  postgresql_user: >
+    name={{ postgres_user }}
+    password={{ postgres_password }}
+    role_attr_flags=CREATEDB,SUPERUSER,LOGIN
+    login_host=localhost
+    port={{ postgres_port }}
+  when: postgres_user is defined and postgres_password is defined
+
+- name: Create {{ postgres_database }} database
+  postgresql_db: >
+    name={{ postgres_database }}
+    owner={{ postgres_user }}
+    login_host=localhost
+    port={{ postgres_port }}
+    target={{ postgres_schema | default(omit) }}
+    state={{ (postgres_schema is defined) | ternary('restore', omit) }}
+  when: postgres_database is defined and postgres_user is defined
