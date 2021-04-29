@@ -57,8 +57,6 @@ curl -v localhost
 curl localhost -o localhost-output
 curl localhost/static/hello.png -o png-output
 set +x
-grep -q 'Hello from Flask!' localhost-output
-if [[ $? -ne 0 ]]; then echo "Failed to find Flask output"; exit 3; else echo "Output OK"; fi
 grep -qz $(echo -e "^\x89PNG") png-output
 if [[ $? -ne 0 ]]; then echo "Failed to find favicon served by nginx"; exit 4; else echo "Static OK"; fi
 

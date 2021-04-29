@@ -14,8 +14,8 @@
 
 - name: Ansible copy file to remote server
   copy:
-    src: ../../../../flask-app-directory
-    dest: '{{ appdata_dir }}'
+    src: flask-app-directory/
+    dest: "{{ appdata_dir }}"
 
 - name: Install requirements.txt
   command: "'{{ venv_dir }}/bin/pip' install -r '{{ appdata_dir }}/requirements.txt'"
