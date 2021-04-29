@@ -3,7 +3,7 @@
 
 - name: Install required system packages
   apt: name={{ item }} state=latest update_cache=yes
-  loop: [ 'apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common', 'python3-pip', 'virtualenv', 'python3-setuptools', 'python3-psycopg2']
+  loop: ['acl', 'apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common', 'python3-pip', 'virtualenv', 'python3-setuptools', 'python3-psycopg2']
 
 - name: Add Docker GPG apt Key
   apt_key:
@@ -39,7 +39,7 @@
     name: '{{ postgres_container_name }}'
     image: '{{ postgres_docker_image }}:{{ postgres_docker_image_tag }}'
     restart_policy: always
-    state: started
+    state: present
     memory: '{{ container_memory_limit | default(omit) }}'
     volumes_from:
       - '{{ postgres_container_name }}-data'
@@ -61,6 +61,21 @@
     - python3-psycopg2
   when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
 
+- name: Enable passwordless sudo
+  lineinfile: dest=/etc/sudoers regexp=^vagrant line="vagrant ALL=(postgres) NOPASSWD:/bin/sh"
+
+- name: Update PostgreSQL config
+  template: src=postgresql.conf.j2 dest=/etc/postgresql/12/main/postgresql.conf
+  register: pgconf
+
+- name: Update PostgreSQL config
+  template: src=pg_hba.conf.j2 dest=/etc/postgresql/12/main/pg_hba.conf
+  register: pg_hba
+
+- name: Restart postgresql
+  service: name=postgresql state=restarted
+  when: pgconf.changed or pg_hba.changed
+
 - name: Create {{ postgres_user }} user
   postgresql_user: >
     name={{ postgres_user }}
@@ -68,9 +83,14 @@
     role_attr_flags=CREATEDB,SUPERUSER,LOGIN
     login_host=localhost
     port={{ postgres_port }}
+  become: yes
+  become_user: postgres
+  become_method: sudo
   when: postgres_user is defined and postgres_password is defined
 
 - name: Create {{ postgres_database }} database
+  become: yes
+  become_user: postgres
   postgresql_db: >
     name={{ postgres_database }}
     owner={{ postgres_user }}
