@@ -1,6 +1,9 @@
-from PyQt5.QtWidgets import QApplication, QLabel
+import app
 
-app = QApplication([])
-label = QLabel('Hello World!')
-label.show()
-app.exec()
+
+def main():
+    app.DocsApp()
+
+
+if __name__ == '__main__':
+    main()
