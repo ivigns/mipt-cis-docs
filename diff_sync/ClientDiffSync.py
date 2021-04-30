@@ -18,6 +18,8 @@ class ClientDiffSync:
         self.client_version += 1
         self.db_connector.set_shadow(text)
 
+        return True
+
     def get_edits(self):
         return self.edits_stack
 
