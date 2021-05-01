@@ -1,8 +1,8 @@
-from diff_sync.mocks.MockStack import MockStack
-from diff_sync.mocks.MockConnector import MockConnector
+from diff_sync.mocks.mock_stack import MockStack
+from diff_sync.mocks.mock_connector import MockConnector
 
-from diff_sync.ClientDiffSync import ClientDiffSync
-from diff_sync.ServerDiffSync import ServerDiffSync
+from diff_sync.client_diff_sync import ClientDiffSync
+from diff_sync.server_diff_sync import ServerDiffSync
 
 # Client
 
