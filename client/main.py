@@ -1,4 +1,4 @@
-import app
+import ui.app as app
 
 
 def main():

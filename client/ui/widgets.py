@@ -139,10 +139,7 @@ class MainWindow(qw.QMainWindow):
     @qc.pyqtSlot()
     def _on_new_doc(self):
         text, ok = qw.QInputDialog.getText(
-            self,
-            f'{APP_NAME} - New Document',
-            'Name new document:',
-            text='New Document',
+            self, f'New Document', 'Name new document:', text='New Document',
         )
         if not ok or not text:
             self.statusBar().showMessage('New document was not created', 2000)

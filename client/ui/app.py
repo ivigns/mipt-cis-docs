@@ -1,7 +1,7 @@
 import PyQt5.QtCore as qc
 import PyQt5.QtWidgets as qw
 
-import widgets
+import ui.widgets as widgets
 
 
 class DocsApp(qw.QApplication):
