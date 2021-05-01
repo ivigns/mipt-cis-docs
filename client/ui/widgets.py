@@ -1,8 +1,8 @@
 import typing
 
 import PyQt5.QtCore as qc
-import PyQt5.QtWidgets as qw
 import PyQt5.QtGui as qgui
+import PyQt5.QtWidgets as qw
 
 APP_NAME = 'Docs'
 

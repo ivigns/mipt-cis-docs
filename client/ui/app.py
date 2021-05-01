@@ -1,6 +1,7 @@
 import PyQt5.QtCore as qc
 import PyQt5.QtWidgets as qw
 
+import db.db as db
 import ui.widgets as widgets
 
 
