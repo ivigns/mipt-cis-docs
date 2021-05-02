@@ -10,7 +10,7 @@ class UpdateDocRequest:
     }
 
     def __init__(
-        self, user_id: int, doc_id: int, version: int, edits: typing.List[str]
+        self, user_id: int, doc_id: int, version: int, edits: typing.List[tuple[str, int]]
     ):
         self._user_id = user_id
         self._doc_id = doc_id
@@ -51,11 +51,11 @@ class UpdateDocRequest:
         self._version = version
 
     @property
-    def edits(self) -> typing.List[str]:
+    def edits(self) -> typing.List[tuple[str, int]]:
         return self._edits
 
     @edits.setter
-    def edits(self, edits: typing.List[str]):
+    def edits(self, edits: typing.List[tuple[str, int]]):
         if edits is None:
             raise ValueError("Invalid value for `edits`, must not be `None`")
 

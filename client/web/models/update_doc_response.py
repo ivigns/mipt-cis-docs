@@ -4,7 +4,7 @@ import typing
 class UpdateDocResponse:
     attributes = {"version": "version", "edits": "edits"}
 
-    def __init__(self, version: int, edits: typing.List[str]):
+    def __init__(self, version: int, edits: typing.List[tuple[str, int]]):
         self._version = version
         self._edits = edits
 
@@ -13,7 +13,7 @@ class UpdateDocResponse:
         return self._version
 
     @property
-    def edits(self) -> typing.List[str]:
+    def edits(self) -> typing.List[tuple[str, int]]:
         return self._edits
 
     def to_dict(self) -> dict:

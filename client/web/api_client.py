@@ -23,7 +23,7 @@ class ApiClient:
         if not isinstance(body, UpdateDocRequest):
             raise ValueError('body should be instance of UpdateDocRequest')
 
-        response = self._request('POST', '/update_doc', body.to_dict(), headers)
+        response = self._request('POST', '/update_doc', body.to_dict())
         return UpdateDocResponse(**response)
 
     def create_doc(self, body: CreateDocRequest):
