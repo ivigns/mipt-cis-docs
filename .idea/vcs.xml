@@ -3,5 +3,6 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/ansible-nginx-uwsgi" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/ansible-nginx-uwsgi/roles/setup_postgres" vcs="Git" />
   </component>
 </project>
