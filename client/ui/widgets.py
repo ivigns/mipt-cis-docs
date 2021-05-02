@@ -12,7 +12,7 @@ from client.web import api_client_mock as api_client  # todo: use real client
 from client.web.models.create_doc_request import CreateDocRequest
 from client.web.models.update_doc_request import UpdateDocRequest
 from diff_sync import client_diff_sync as diff_sync
-from client import resourses
+from client import resources
 
 APP_NAME = 'Docs'
 

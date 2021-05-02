@@ -1,2 +1,2 @@
-pyrcc5 client/resourses.qrc -o client/resourses.py
-pyinstaller.exe -wF -n MiptCisDocs -i client/docs_icon.ico --add-data 'client/docs_icon.ico;.' client/main.py
+pyrcc5 client/resources.qrc -o client/resources.py
+pyinstaller --noconfirm -F --icon 'client/docs_icon.ico' --name MiptCisDocs --add-data 'client/docs_icon.ico;.' --resource client/docs_icon.ico  client/main.py
