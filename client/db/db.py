@@ -1,6 +1,8 @@
 from collections import deque
+import os
 import typing
 
+import PyQt5.QtCore as qc
 import PyQt5.QtSql as qsql
 
 
@@ -114,8 +116,16 @@ class DbHelper:
 
     def __init__(self):
         self._db = qsql.QSqlDatabase.addDatabase('QSQLITE')
-        self._db.setDatabaseName('.docs.sqlite')
-        self._db.open()
+        writable_location = qc.QStandardPaths.writableLocation(
+            qc.QStandardPaths.StandardLocation.AppDataLocation
+        )
+        if not os.path.exists(writable_location):
+            os.mkdir(writable_location)
+        self._db.setDatabaseName(
+            os.path.join(f'{writable_location}', '.docs.sqlite',)
+        )
+        if not self._db.open():
+            raise DbException(f'Error while opening db')
 
         query = qsql.QSqlQuery()
         if not query.exec(self.SETUP_QUERY.format(table=self.TABLE_NAME)):
