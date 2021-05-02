@@ -21,7 +21,7 @@
 
 - name: Install Docker Module, Flask for Python
   pip:
-    name: docker, Flask
+    name: docker, Flask, psycopg2-binary
 
 
 - name: Install Docker Module for Python
