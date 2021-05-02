@@ -100,6 +100,7 @@ class DbConnector:
 
 
 class DbHelper:
+    DB_DIR = 'MiptCisDocs'
     VERSION = 'v1'
     TABLE_NAME = f'users_files_{VERSION}'
     SETUP_QUERY = '''
@@ -119,6 +120,7 @@ class DbHelper:
         writable_location = qc.QStandardPaths.writableLocation(
             qc.QStandardPaths.StandardLocation.AppDataLocation
         )
+        writable_location = os.path.abspath(os.path.join(writable_location, '..', self.DB_DIR))
         if not os.path.exists(writable_location):
             os.mkdir(writable_location)
         self._db.setDatabaseName(
