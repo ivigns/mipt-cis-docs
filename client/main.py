@@ -1,4 +1,4 @@
-import ui.app as app
+import client.ui.app as app
 
 
 def main():

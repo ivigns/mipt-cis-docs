@@ -1,59 +1,88 @@
+from collections import deque
 import typing
 
 import PyQt5.QtSql as qsql
 
 
+class DbException(Exception):
+    def __init__(self, text: str):
+        super().__init__()
+        self._text = text
+
+    def __str__(self) -> str:
+        return self._text
+
+
 class DbConnector:
     INSERT_QUERY = '''
-        INSERT INTO {table} ({field}, file_id, user_id)
-        VALUES ({value}, {file_id}, {user_id})
-        ON CONFLICT (file_id, user_id) DO UPDATE SET {field} = {value};
+        INSERT INTO {table} ({field}, doc_id, user_id)
+        VALUES (:value, :doc_id, :user_id)
+        ON CONFLICT (doc_id, user_id) DO UPDATE SET {field} = :value;
     '''
     SELECT_QUERY = '''
         SELECT {field} FROM {table}
-        WHERE file_id = {file_id} AND user_id = {user_id};
+        WHERE doc_id = :doc_id AND user_id = :user_id;
     '''
 
     def __init__(
-        self, db: qsql.QSqlDatabase, table_name: str, login: str, doc_name: str
+        self, db: qsql.QSqlDatabase, table_name: str, user_id: int, doc_id: int
     ):
         self._table_name = table_name
-        self._user_id = login
-        self._file_id = doc_name
+        self._user_id = user_id
+        self._doc_id = doc_id
         self._db = db
 
-    def _set_field(self, field: str, text: str):
+    def _set_field(self, field: str, value: typing.Union[str, int]):
         query = qsql.QSqlQuery()
-        query.exec(
-            self.INSERT_QUERY.format(
-                table=self._table_name,
-                field=field,
-                value=text,
-                file_id=self._file_id,
-                user_id=self._user_id,
+        if not query.prepare(
+            self.INSERT_QUERY.format(table=self._table_name, field=field)
+        ):
+            raise DbException(
+                'Error while preparing INSERT_QUERY: '
+                f'{query.lastError().text()}'
             )
-        )
+        query.bindValue(':value', value)
+        query.bindValue(':doc_id', self._doc_id)
+        query.bindValue(':user_id', self._user_id)
+        if not query.exec():
+            raise DbException(
+                'Error while executing INSERT_QUERY: '
+                f'{query.lastError().text()}'
+            )
 
-    def _get_field(self, field: str) -> typing.Optional[str]:
+    def _get_field(self, field: str) -> typing.Union[str, int]:
         query = qsql.QSqlQuery()
-        query.exec(
-            self.SELECT_QUERY.format(
-                table=self._table_name,
-                field=field,
-                file_id=self._file_id,
-                user_id=self._user_id,
+        if not query.prepare(
+            self.SELECT_QUERY.format(table=self._table_name, field=field)
+        ):
+            raise DbException(
+                'Error while preparing SELECT_QUERY: '
+                f'{query.lastError().text()}'
             )
-        )
-        result = None
+        query.bindValue(':doc_id', self._doc_id)
+        query.bindValue(':user_id', self._user_id)
+        if not query.exec():
+            raise DbException(
+                'Error while executing SELECT_QUERY: '
+                f'{query.lastError().text()}'
+            )
+
+        value = 0 if field.endswith('version') else ''
         while query.next():
-            result = query.value(0)
-        return result
+            value = query.value(0) or value
+        return value
 
-    def get_text(self) -> typing.Optional[str]:
+    def get_text(self) -> str:
         return self._get_field('curr_text')
 
-    def get_shadow(self) -> typing.Optional[str]:
+    def get_shadow(self) -> str:
         return self._get_field('shadow')
+
+    def get_client_version(self) -> int:
+        return self._get_field('client_version')
+
+    def get_server_version(self) -> int:
+        return self._get_field('server_version')
 
     def set_text(self, text: str):
         self._set_field('curr_text', text)
@@ -61,17 +90,25 @@ class DbConnector:
     def set_shadow(self, text: str):
         self._set_field('shadow', text)
 
+    def set_client_version(self, version: int):
+        self._set_field('client_version', version)
+
+    def set_server_version(self, version: int):
+        self._set_field('server_version', version)
+
 
 class DbHelper:
     VERSION = 'v1'
-    TABLE_NAME = f'users_files_{self.VERSION}'
+    TABLE_NAME = f'users_files_{VERSION}'
     SETUP_QUERY = '''
         CREATE TABLE IF NOT EXISTS {table} (
-            file_id VARCHAR NOT NULL,
-            user_id VARCHAR NOT NULL,
+            doc_id BIGINT NOT NULL,
+            user_id BIGINT NOT NULL,
+            client_version BIGINT,
+            server_version BIGINT,
             curr_text TEXT,
             shadow TEXT,
-            PRIMARY KEY(file_id, user_id)
+            PRIMARY KEY(doc_id, user_id)
         );
     '''
 
@@ -81,10 +118,24 @@ class DbHelper:
         self._db.open()
 
         query = qsql.QSqlQuery()
-        ok = query.exec(SETUP_QUERY.format(table=self.TABLE_NAME))
-        if not ok:
-            raise RuntimeError('Error while db setup')
+        if not query.exec(self.SETUP_QUERY.format(table=self.TABLE_NAME)):
+            raise DbException(
+                f'Error while db setup: {query.lastError().text()}'
+            )
 
-    def get_connector(self, login: str, doc_name: str) -> DbConnector:
-        return DbConnector(self._db, self.TABLE_NAME, login, doc_name)
+    def get_connector(self, user_id: int, doc_id: int) -> DbConnector:
+        return DbConnector(self._db, self.TABLE_NAME, user_id, doc_id)
 
+
+class Stack(deque):
+    def __init__(self, values):
+        super().__init__(values)
+
+    def push(self, item):
+        self.append(item)
+
+    def top(self):
+        return self[-1]
+
+    def empty(self):
+        return not self

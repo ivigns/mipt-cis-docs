@@ -1,28 +1,22 @@
-class UpdateDocResponse:
-    attributes = {
-        "doc_id": "doc_id",
-        "received_version": "received_version",
-        "edits": "edits"
-    }
+import typing
 
-    def __init__(self, doc_id, received_version, edits):
-        self._doc_id = doc_id
-        self._received_version = received_version
+
+class UpdateDocResponse:
+    attributes = {"version": "version", "edits": "edits"}
+
+    def __init__(self, version: int, edits: typing.List[str]):
+        self._version = version
         self._edits = edits
 
     @property
-    def doc_id(self):
-        return self._doc_id
+    def version(self) -> int:
+        return self._version
 
     @property
-    def received_version(self):
-        return self._received_version
-
-    @property
-    def edits(self):
+    def edits(self) -> typing.List[str]:
         return self._edits
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         result = {}
         for attr, key in self.attributes.items():
             value = getattr(self, attr)
