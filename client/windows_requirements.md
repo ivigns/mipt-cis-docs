@@ -4,4 +4,4 @@ PATH installation is required
  - Python3 - https://www.python.org/ftp/python/3.9.4/python-3.9.4-amd64.exe
  - GPerf - http://gnuwin32.sourceforge.net/downlinks/gperf.php
  - Bison, Flex - http://sourceforge.net/projects/winflexbison/files/win_flex_bison-2.5.5.zip/download
- - Install `python` requirements from `requirements.txt`
+ - Install `python` requirements with `install_windows_requirements.sh`
