@@ -12,8 +12,14 @@ from client.web import api_client_mock as api_client  # todo: use real client
 from client.web.models.create_doc_request import CreateDocRequest
 from client.web.models.update_doc_request import UpdateDocRequest
 from diff_sync import client_diff_sync as diff_sync
+from client import resources
 
 APP_NAME = 'Docs'
+
+
+def set_icon(window: qw.QWidget):
+    icon = qgui.QIcon(":/icons/app.ico")
+    window.setWindowIcon(icon)
 
 
 def center_window(window: qw.QWidget, width: int, height: int):
@@ -49,6 +55,7 @@ class LoginWindow(qw.QWidget):
         self._logged_in.connect(app.on_login)
 
         self.setWindowTitle(f'{APP_NAME} - Log in')
+        set_icon(self)
         center_window(self, 300, 100)
 
     @qc.pyqtSlot()
@@ -135,6 +142,7 @@ class MainWindow(qw.QMainWindow):
         self._docs_list.itemActivated.connect(self._on_doc_clicked)
 
         self.setWindowTitle(APP_NAME)
+        set_icon(self)
         center_window(self, 600, 500)
 
     @qc.pyqtSlot(str, int)
@@ -288,6 +296,7 @@ class DocWindow(qw.QMainWindow):
         self._closed.connect(main_window.on_doc_closed)
 
         self.setWindowTitle(f'{APP_NAME} - {title}')
+        set_icon(self)
         center_window(self, 500, 700)
 
         self.show()
