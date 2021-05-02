@@ -1,8 +1,11 @@
+import sys
+
 import client.ui.app as app
 
 
 def main():
-    app.DocsApp()
+    docs_app = app.DocsApp()
+    sys.exit(docs_app.exec())
 
 
 if __name__ == '__main__':

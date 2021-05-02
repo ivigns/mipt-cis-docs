@@ -21,8 +21,6 @@ class DocsApp(qw.QApplication):
         self._login_window = widgets.LoginWindow(self)
         self._login_window.show()
 
-        self.exec()
-
     @qc.pyqtSlot(str, int)
     def on_login(self, login: str, user_id: int):
         self.logged_in.emit(login, user_id)

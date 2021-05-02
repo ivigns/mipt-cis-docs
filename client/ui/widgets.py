@@ -186,7 +186,6 @@ class MainWindow(qw.QMainWindow):
                 self._web_client,
             )
             self._opened_docs[doc.doc_id] = doc_window
-            print(self._opened_docs)
 
     @qc.pyqtSlot()
     def _on_new_doc(self):
