@@ -133,3 +133,6 @@ dmypy.json
 
 # SQLITE
 *.sqlite
+
+# Mac OS dir files
+*.DS_Store
