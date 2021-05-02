@@ -17,6 +17,10 @@
     src: flask-app-directory/
     dest: "{{ appdata_dir }}"
 
+- name: Chmod appdata dir for logging permission
+  command: chmod 777 /srv/myapp/appdata/
+  become: yes
+
 - name: Install requirements.txt
   command: "'{{ venv_dir }}/bin/pip' install -r '{{ appdata_dir }}/requirements.txt'"
 

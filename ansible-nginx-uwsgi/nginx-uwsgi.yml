@@ -18,7 +18,28 @@
      - install_Debian_Ubuntu
      - setup_venv_app
      - patch_config_Debian_Ubuntu
+
+- hosts: os_Debian:os_Ubuntu
+  become: yes
+  roles:
+    - role: setup_postgres
+      use_datastore_container: true
+      datastore_container_name: dbstore
+      postgres_container_name: postgres
+      expose_host_port: 5432
+      postgres_docker_tag: 9.5
+      postgres_docker_env:
+        POSTGRES_PASSWORD: pg_admin_pw
+        POSTGRES_USER: pg_admin_user
+        PGDATA: /var/lib/postgresql/data/pgdata
+        POSTGRES_DB: pg_default_db
+        POSTGRES_INITDB_ARGS: "--data-checksums"
+
+- hosts: os_Debian:os_Ubuntu
+  gather_facts: False
+  become: yes
+  become_user: root
+  roles:
      - configure_nginx_uwsgi
      - create_service_Debian_Ubuntu
      - start_services
-

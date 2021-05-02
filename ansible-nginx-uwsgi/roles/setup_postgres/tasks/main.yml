@@ -1,0 +1,61 @@
+---
+- name: Install aptitude using apt
+  apt: name=aptitude state=latest update_cache=yes force_apt_get=yes
+
+- name: Install required system packages
+  apt: name={{ item }} state=latest update_cache=yes
+  loop: ['acl', 'apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common', 'python3-pip', 'virtualenv', 'python3-setuptools', 'python3-psycopg2']
+
+- name: Add Docker GPG apt Key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add Docker Repository
+  apt_repository:
+    repo: deb https://download.docker.com/linux/ubuntu bionic stable
+    state: present
+
+- name: Update apt and install docker-ce
+  apt: update_cache=yes name=docker-ce state=latest
+
+- name: Install Docker Module, Flask for Python
+  pip:
+    name: docker, Flask
+
+
+- name: Install Docker Module for Python
+  pip:
+    name: docker
+# Pull image specified by variable default_image from the Docker Hub
+- name: check/create data store container
+  docker_container:
+    name: "{{ datastore_container_name }}"
+    image: >-
+      postgres{{ ':%s' % postgres_docker_tag if postgres_docker_tag else '' }}
+    state: present
+    volumes:
+      - /var/lib/postgresql/data
+    command: "true"
+  when: use_datastore_container
+
+- name: check/create postgresql container
+  docker_container:
+    name: "{{ postgres_container_name }}"
+    image: >-
+      postgres{{ ':%s' % postgres_docker_tag if postgres_docker_tag else '' }}
+    state: started
+    restart_policy: always
+    env: "{{ postgres_docker_env if postgres_docker_env else omit }}"
+    volumes_from: >-
+      {{ [datastore_container_name] if use_datastore_container else omit }}
+    exposed_ports: "{{ ['%s:5432' % expose_host_port] if expose_host_port else omit }}"
+
+- name: inspect postgres docker
+  command: >
+    docker inspect --type=container
+    --format='{{ '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' }}'
+    {{ postgres_container_name }}
+  register: postgres_address_result
+
+- set_fact: postgres_container_address={{ postgres_address_result.stdout }}
