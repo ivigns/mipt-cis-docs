@@ -238,6 +238,7 @@ class DocWindow(qw.QMainWindow):
     ):
         super().__init__(main_window)
 
+        self._title = title
         self._doc_id = doc_id
         self._user_id = user_id
         self._saved = False
@@ -255,6 +256,12 @@ class DocWindow(qw.QMainWindow):
         self.centralWidget().setLayout(layout)
 
         file_menu = self.menuBar().addMenu('&File')
+        file_menu.addAction(
+            '&Import', self._on_import, qgui.QKeySequence.StandardKey.Open
+        )
+        file_menu.addAction(
+            '&Export', self._on_export, qgui.QKeySequence.StandardKey.SaveAs
+        )
         file_menu.addAction(
             '&Save', self._on_save, qgui.QKeySequence.StandardKey.Save
         )
@@ -295,7 +302,7 @@ class DocWindow(qw.QMainWindow):
         self._timer.timeout.connect(self._on_save)
         self._closed.connect(main_window.on_doc_closed)
 
-        self.setWindowTitle(f'{APP_NAME} - {title}')
+        self.setWindowTitle(f'{APP_NAME} - {self._title}')
         set_icon(self)
         center_window(self, 500, 700)
 
@@ -382,6 +389,44 @@ class DocWindow(qw.QMainWindow):
                 self._set_text(text)
 
         self._change_status(True)
+
+    @qc.pyqtSlot()
+    def _on_import(self):
+        filename, _ = qw.QFileDialog.getOpenFileName(
+            self, 'Import document', f'{self._title}.txt', 'Text files (*.txt)'
+        )
+        if filename:
+            try:
+                with open(filename, 'r') as import_file:
+                    self._textedit.setPlainText(import_file.read())
+            except OSError:
+                qw.QMessageBox.critical(
+                    self,
+                    'Error',
+                    'Cannot read selected file',
+                    qw.QMessageBox.StandardButton.Ok,
+                )
+
+        self._on_save()
+
+    @qc.pyqtSlot()
+    def _on_export(self):
+        self._on_save()
+
+        filename, _ = qw.QFileDialog.getSaveFileName(
+            self, 'Export document', f'{self._title}.txt', 'Text files (*.txt)'
+        )
+        if filename:
+            try:
+                with open(filename, 'w') as export_file:
+                    print(self._textedit.toPlainText(), file=export_file)
+            except OSError:
+                qw.QMessageBox.critical(
+                    self,
+                    'Error',
+                    'Cannot write in selected file',
+                    qw.QMessageBox.StandardButton.Ok,
+                )
 
     def closeEvent(self, event: qgui.QCloseEvent):
         self._on_save()
