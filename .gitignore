@@ -127,4 +127,18 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
 .idea/
+
+# VS Code
+*.vscode/
+
+# SQLITE
+*.sqlite
+
+# Mac OS dir files
+*.DS_Store
+
+# Qt resources
+*resources.py
+
