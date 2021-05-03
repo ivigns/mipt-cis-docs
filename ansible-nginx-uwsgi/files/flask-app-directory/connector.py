@@ -28,10 +28,10 @@ class Connector:
                                                                 "doc_id bigint not null, " \
                                                                 "user_id bigint not null, " \
                                                                 "title text not null, " \
-                                                                "server_version text not null DEFAULT 0, " \
-                                                                "client_version text not null DEFAULT 0);"
+                                                                "server_version int not null DEFAULT 0, " \
+                                                                "client_version int not null DEFAULT 0);"
                 self.cursor.execute(sqlCreateTable)
-                self.connection.commit()
+                
                 self.logger.info("Table %s created" % table_name)
             else:
                 self.logger.info("Table %s exists" % table_name)
@@ -47,7 +47,7 @@ class Connector:
                 self.logger.info("creating table %s" % table_name)
                 sqlCreateTable = "create table " + table_name + " (login text not null, user_id int not null);"
                 self.cursor.execute(sqlCreateTable)
-                self.connection.commit()
+                
                 self.logger.info("Table %s created" % table_name)
             else:
                 self.logger.info("table %s exists" % table_name)
@@ -71,7 +71,11 @@ class Connector:
             return 0
 
     def get_server_version(self, doc_id, user_id):
-        return self.get_field("server_version", doc_id, user_id)
+        version = self.get_field("server_version", doc_id, user_id)
+        if version is not None:
+            return version
+        else:
+            return 0
 
     def get_field(self, field, doc_id, user_id):
         try:
@@ -99,7 +103,7 @@ class Connector:
             for row in records:
                 result.append({'title': row[self.field_to_id['title']],
                                'doc_id': row[self.field_to_id['doc_id']]})
-            return result
+            return result[::-1]
         except Exception as exception:
             self.logger.info("Failed get_field query, reason: %s" % exception)
             return None
@@ -131,7 +135,7 @@ class Connector:
             if record is None:
                 self.cursor.execute("INSERT INTO %s (login, user_id) VALUES(%s, %s)",
                                     (AsIs(self.users_table_name), user_login, user_id))
-                self.connection.commit()
+                
                 self.logger.info("User %s added to base" % user_login)
             else:
                 self.logger.info("User %s is already known" % user_login)
@@ -157,12 +161,12 @@ class Connector:
                 self.cursor.execute(
                     "INSERT INTO %s (%s, doc_id, user_id) VALUES(%s, %s, %s)",
                     (AsIs(self.docs_table_name), AsIs(field), value, doc_id, user_id))
-                self.connection.commit()
+                
             else:
                 sql_update_query = """Update %s set %s = %s where doc_id = %s and user_id = %s"""
                 self.cursor.execute(sql_update_query,
                                (AsIs(self.docs_table_name), AsIs(field), value, doc_id, user_id))
-                self.connection.commit()
+                
             self.logger.info(
                 "Success set_field query, user_id, doc_id, field, value: %s %s %s %s" % (user_id, doc_id, field, value)
             )

@@ -27,6 +27,7 @@ postgresConnection = psycopg2.connect(user="pg_admin_user",
                                       database="pg_default_db",
                                       host='172.17.0.2'
 )
+postgresConnection.autocommit = True
 cursor = postgresConnection.cursor()
 field_to_id = {"curr_text": 0,
                "shadow": 1,
