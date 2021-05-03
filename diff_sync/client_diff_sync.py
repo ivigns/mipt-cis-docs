@@ -14,7 +14,9 @@ class ClientDiffSync:
         patches = self.dmp.patch_make(self.db_connector.get_shadow(), text)
         if len(patches) == 0:
             return False
-        self.edits_stack.push((self.dmp.patch_toText(patches), self.client_version))
+        self.edits_stack.push(
+            (self.dmp.patch_toText(patches), self.client_version)
+        )
         self.client_version += 1
         self.db_connector.set_shadow(text)
         self.db_connector.set_client_version(self.client_version)
@@ -53,7 +55,10 @@ class ClientDiffSync:
             self.db_connector.set_server_version(self.server_version)
 
     def filter_stack(self, version):
-        while not self.edits_stack.empty() and self.edits_stack.top()[1] <= version:
+        while (
+            not self.edits_stack.empty()
+            and self.edits_stack.top()[1] <= version
+        ):
             self.edits_stack.pop()
 
     def get_received_version(self):
