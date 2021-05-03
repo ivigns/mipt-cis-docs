@@ -87,6 +87,9 @@ class LoginWindow(qw.QWidget):
 
     @qc.pyqtSlot()
     def _on_login_clicked(self):
+        if not self._app.focus == self._app.FOCUS_LOGIN:
+            return
+
         login = self._login_edit.text()
         if not login:
             qw.QMessageBox.information(
@@ -122,10 +125,10 @@ class LoginWindow(qw.QWidget):
         except db.DbException as exc:
             print(exc, file=sys.stderr)
         self._app.web_client = web_client
-        self._app.login_window = None
         self._app.main_window = MainWindow(
             self._app, login, user_id, f'{host}:{port}'
         )
+        self._app.focus = self._app.FOCUS_MAIN
 
         self._app.main_window.show()
         self.close()
@@ -263,16 +266,20 @@ class MainWindow(qw.QMainWindow):
 
     @qc.pyqtSlot()
     def _on_logout(self):
+        if not self._app.focus == self._app.FOCUS_MAIN:
+            return
+
         self._app.web_client = None
-        self._app.main_window = None
         self._app.login_window = LoginWindow(self._app)
+        self._app.focus = self._app.FOCUS_LOGIN
 
         self._app.login_window.show()
         self.close()
 
     @qc.pyqtSlot(str)
     def on_doc_closed(self, doc_id: str):
-        self._opened_docs.pop(int(doc_id))
+        if int(doc_id) in self._opened_docs:
+            self._opened_docs.pop(int(doc_id))
 
 
 class DocWindow(qw.QMainWindow):

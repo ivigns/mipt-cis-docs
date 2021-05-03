@@ -47,7 +47,7 @@ class HTTPConnectionMock:
         if self._host != self.ACTUAL_HOST:
             raise http.client.InvalidURL('bad host')
         # imitate bad service
-        if random.randint(0, 100) % 10 == 0:
+        if random.randint(0, 100) % 7 == 0:
             self._response_dict = self._response_dict = {
                 'code': 'INTERNAL_ERROR',
                 'message': 'internal server error',

@@ -8,6 +8,9 @@ import client.ui.widgets as widgets
 
 
 class DocsApp(qw.QApplication):
+    FOCUS_LOGIN = 'LoginWindow'
+    FOCUS_MAIN = 'MainWindow'
+
     def __init__(self):
         super().__init__(sys.argv)
 
@@ -15,5 +18,7 @@ class DocsApp(qw.QApplication):
         self.web_client = None
         self.main_window = None
         self.login_window = widgets.LoginWindow(self)
+        self.focus = self.FOCUS_LOGIN
+        print('focus on app start ', self.focus)
 
         self.login_window.show()
