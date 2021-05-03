@@ -8,13 +8,14 @@ import PyQt5.QtGui as qgui
 import PyQt5.QtWidgets as qw
 
 from client.db import db
-from client.web import api_client_mock as api_client  # todo: use real client
+import client.web.api_client as api_client
+import client.web.http_connection_mock as conn_mock
 from client.web.models.create_doc_request import CreateDocRequest
 from client.web.models.update_doc_request import UpdateDocRequest
 from diff_sync import client_diff_sync as diff_sync
 from client import resources
 
-APP_NAME = 'Docs'
+APP_NAME = 'MiptCisDocs'
 
 
 def set_icon(window: qw.QWidget):
@@ -29,30 +30,56 @@ def center_window(window: qw.QWidget, width: int, height: int):
 
 
 class LoginWindow(qw.QWidget):
-    _logged_in = qc.pyqtSignal(str, int)
+    SECRET_LOGIN = 'test_mock'
 
     def __init__(self, app: typing.Any):
         super().__init__(None, qc.Qt.WindowType.Dialog)
 
-        self._login = None
-        self._user_id = None
-        self._web_client: api_client.ApiClientMock = app.web_client
+        self._app = app
 
-        label = qw.QLabel('Welcome!')
-        label.setAlignment(qc.Qt.AlignmentFlag.AlignCenter)
-        self._line_edit = qw.QLineEdit()
-        self._line_edit.setPlaceholderText('Login')
+        welcome_label = qw.QLabel('Welcome!')
+        welcome_label.setAlignment(qc.Qt.AlignmentFlag.AlignCenter)
+
+        self._login_edit = qw.QLineEdit()
+        self._login_edit.setMaxLength(20)
+        self._login_edit.setPlaceholderText('login')
+
+        try:
+            host, port = self._app.db_helper.get_host_port()
+        except db.DbException as exc:
+            print(exc, file=sys.stderr)
+            host, port = '', ''
+
+        self._host_edit = qw.QLineEdit()
+        self._host_edit.setText(host)
+        self._host_edit.setPlaceholderText('127.0.0.1')
+
+        self._port_edit = qw.QLineEdit()
+        self._port_edit.setText(port)
+        self._port_edit.setPlaceholderText('80')
+
+        grid_layout = qw.QGridLayout()
+        grid_layout.addWidget(qw.QLabel('Login:'), 0, 0)
+        grid_layout.addWidget(qw.QLabel('Host:'), 1, 0)
+        grid_layout.addWidget(qw.QLabel('Port:'), 2, 0)
+        grid_layout.addWidget(self._login_edit, 0, 1)
+        grid_layout.addWidget(self._host_edit, 1, 1)
+        grid_layout.addWidget(self._port_edit, 2, 1)
+        grid_layout.setColumnStretch(0, 1)
+        grid_layout.setColumnStretch(1, 4)
+
         login_button = qw.QPushButton('Log in')
 
         layout = qw.QVBoxLayout()
-        layout.addWidget(label)
-        layout.addWidget(self._line_edit)
+        layout.addWidget(welcome_label, 1)
+        layout.addLayout(grid_layout)
         layout.addWidget(login_button)
         self.setLayout(layout)
 
-        self._line_edit.returnPressed.connect(login_button.click)
+        self._login_edit.returnPressed.connect(login_button.click)
+        self._host_edit.returnPressed.connect(login_button.click)
+        self._port_edit.returnPressed.connect(login_button.click)
         login_button.clicked.connect(self._on_login_clicked)
-        self._logged_in.connect(app.on_login)
 
         self.setWindowTitle(f'{APP_NAME} - Log in')
         set_icon(self)
@@ -60,8 +87,8 @@ class LoginWindow(qw.QWidget):
 
     @qc.pyqtSlot()
     def _on_login_clicked(self):
-        self._login = self._line_edit.text()
-        if not self._login:
+        login = self._login_edit.text()
+        if not login:
             qw.QMessageBox.information(
                 self,
                 'Info',
@@ -70,9 +97,17 @@ class LoginWindow(qw.QWidget):
             )
             return
 
+        host = self._host_edit.text()
+        port = self._port_edit.text()
+        Connection = http.client.HTTPConnection
+        if login == self.SECRET_LOGIN:
+            Connection = conn_mock.HTTPConnectionMock
+        web_client = api_client.ApiClient(
+            f'{host}:{port}', Connection=Connection
+        )
         try:
-            self._user_id = self._web_client.login(self._login)
-        except (http.client.HTTPException, KeyError) as exc:
+            user_id = web_client.login(login)
+        except http.client.HTTPException as exc:
             print(exc, file=sys.stderr)
             qw.QMessageBox.critical(
                 self,
@@ -82,7 +117,17 @@ class LoginWindow(qw.QWidget):
             )
             return
 
-        self._logged_in.emit(self._login, self._user_id)
+        try:
+            self._app.db_helper.set_host_port(host, port)
+        except db.DbException as exc:
+            print(exc, file=sys.stderr)
+        self._app.web_client = web_client
+        self._app.login_window = None
+        self._app.main_window = MainWindow(
+            self._app, login, user_id, f'{host}:{port}'
+        )
+
+        self._app.main_window.show()
         self.close()
 
 
@@ -99,24 +144,27 @@ class DocListItem(qw.QListWidgetItem):
 class MainWindow(qw.QMainWindow):
     STATUS_TIMEOUT = 2000
 
-    def __init__(self, app: typing.Any):
+    def __init__(self, app: typing.Any, login: str, user_id: int, host: str):
         super().__init__()
 
-        self._login = None
-        self._user_id = None
-        self._db_helper: db.DbHelper = app.db_helper
-        self._web_client: api_client.ApiClientMock = app.web_client
-
+        self._user_id = user_id
+        self._app = app
         self._opened_docs = {}
 
-        self._login_label = qw.QLabel()
-        self._login_label.setFixedHeight(50)
-        self._login_label.setAlignment(
+        login_label = qw.QLabel(f'Logged in as <b>{login}</b>')
+        login_label.setFixedHeight(50)
+        login_label.setAlignment(
             qc.Qt.AlignmentFlag.AlignLeft | qc.Qt.AlignmentFlag.AlignVCenter
+        )
+        host_label = qw.QLabel(f'Server host: <b>{host}</b>')
+        host_label.setFixedHeight(50)
+        host_label.setAlignment(
+            qc.Qt.AlignmentFlag.AlignRight | qc.Qt.AlignmentFlag.AlignVCenter
         )
         label_layout = qw.QHBoxLayout()
         label_layout.addStretch(1)
-        label_layout.addWidget(self._login_label, 20)
+        label_layout.addWidget(login_label, 20)
+        label_layout.addWidget(host_label, 20)
         label_layout.addStretch(1)
 
         new_doc_button = qw.QPushButton('New Document')
@@ -128,36 +176,35 @@ class MainWindow(qw.QMainWindow):
         caption_layout.addWidget(update_button)
 
         self._docs_list = qw.QListWidget()
+        self._on_docs_list_update()
+
+        logout_button = qw.QPushButton('Log out')
+        bottom_layout = qw.QHBoxLayout()
+        bottom_layout.addStretch(1)
+        bottom_layout.addWidget(logout_button)
 
         layout = qw.QVBoxLayout()
         layout.addLayout(label_layout)
         layout.addLayout(caption_layout)
         layout.addWidget(self._docs_list, 1)
+        layout.addLayout(bottom_layout)
         self.setCentralWidget(qw.QWidget())
         self.centralWidget().setLayout(layout)
 
-        app.logged_in.connect(self._on_login)
         new_doc_button.clicked.connect(self._on_new_doc)
         update_button.clicked.connect(self._on_docs_list_update)
         self._docs_list.itemActivated.connect(self._on_doc_clicked)
+        logout_button.clicked.connect(self._on_logout)
 
         self.setWindowTitle(APP_NAME)
         set_icon(self)
         center_window(self, 600, 500)
 
-    @qc.pyqtSlot(str, int)
-    def _on_login(self, login: str, user_id: int):
-        self._login = login
-        self._user_id = user_id
-        self._login_label.setText(f'Logged in as <b>{self._login}</b>')
-        self._on_docs_list_update()
-        self.show()
-
     @qc.pyqtSlot()
     def _on_docs_list_update(self):
         try:
-            response = self._web_client.list_all_docs()
-        except (http.client.HTTPException, KeyError) as exc:
+            response = self._app.web_client.list_all_docs()
+        except http.client.HTTPException as exc:
             print(exc, file=sys.stderr)
             self.statusBar().showMessage(
                 'Error while connecting to server', self.STATUS_TIMEOUT
@@ -186,12 +233,7 @@ class MainWindow(qw.QMainWindow):
             self._opened_docs[doc.doc_id].activateWindow()
         else:
             doc_window = DocWindow(
-                doc.doc_id,
-                doc.text(),
-                self._user_id,
-                self,
-                self._db_helper.get_connector(self._user_id, doc.doc_id),
-                self._web_client,
+                self._app, doc.doc_id, doc.text(), self._user_id,
             )
             self._opened_docs[doc.doc_id] = doc_window
 
@@ -209,8 +251,8 @@ class MainWindow(qw.QMainWindow):
         doc_id = uuid.uuid1().int >> 64
         request = CreateDocRequest(title, self._user_id, doc_id)
         try:
-            self._web_client.create_doc(request)
-        except (http.client.HTTPException, KeyError) as exc:
+            self._app.web_client.create_doc(request)
+        except http.client.HTTPException as exc:
             print(exc, file=sys.stderr)
             self.statusBar().showMessage(
                 'Error while connecting to server', self.STATUS_TIMEOUT
@@ -219,35 +261,39 @@ class MainWindow(qw.QMainWindow):
 
         self._on_docs_list_update()
 
+    @qc.pyqtSlot()
+    def _on_logout(self):
+        self._app.web_client = None
+        self._app.main_window = None
+        self._app.login_window = LoginWindow(self._app)
+
+        self._app.login_window.show()
+        self.close()
+
     @qc.pyqtSlot(str)
     def on_doc_closed(self, doc_id: str):
         self._opened_docs.pop(int(doc_id))
 
 
 class DocWindow(qw.QMainWindow):
+    TIMER_TIMEOUT = 5000
     _closed = qc.pyqtSignal(str)
 
     def __init__(
-        self,
-        doc_id: int,
-        title: str,
-        user_id: int,
-        main_window: qw.QWidget,
-        db_connector: db.DbConnector,
-        web_client: api_client.ApiClientMock,
+        self, app: typing.Any, doc_id: int, title: str, user_id: int,
     ):
-        super().__init__(main_window)
+        super().__init__(app.main_window)
 
-        self._title = title
+        self._app = app
         self._doc_id = doc_id
+        self._title = title
         self._user_id = user_id
         self._saved = False
+        db_connector = self._app.db_helper.get_connector(user_id, doc_id)
         self._diff_sync = diff_sync.ClientDiffSync(db_connector, db.Stack([]))
-        self._web_client = web_client
 
         self._textedit = qw.QTextEdit()
         self._load_text()
-        self._on_save()
 
         layout = qw.QVBoxLayout()
         layout.addWidget(self._textedit)
@@ -294,19 +340,20 @@ class DocWindow(qw.QMainWindow):
         edit_menu.menuAction().setStatusTip('Text edit actions')
 
         self._timer = qc.QTimer(self)
-        self._timer.setInterval(5 * 1000)
+        self._timer.setInterval(self.TIMER_TIMEOUT)
         self._timer.setSingleShot(False)
         self._timer.start()
 
         self._textedit.textChanged.connect(self._on_edit)
         self._timer.timeout.connect(self._on_save)
-        self._closed.connect(main_window.on_doc_closed)
+        self._closed.connect(self._app.main_window.on_doc_closed)
 
         self.setWindowTitle(f'{APP_NAME} - {self._title}')
         set_icon(self)
         center_window(self, 500, 700)
 
         self.show()
+        self._on_save()
 
     def _load_text(self):
         try:
@@ -372,14 +419,14 @@ class DocWindow(qw.QMainWindow):
                     edits = self._diff_sync.get_edits()
                     version = self._diff_sync.get_received_version()
                     request = UpdateDocRequest(
-                        self._user_id, self._doc_id, version, edits
+                        self._user_id, self._doc_id, version, list(edits)
                     )
-                    response = self._web_client.update_doc(request)
+                    response = self._app.web_client.update_doc(request)
                     self._diff_sync.patch_edits(
                         db.Stack(response.edits), response.version
                     )
                 text = self._diff_sync.db_connector.get_text()
-            except (http.client.HTTPException, KeyError, db.DbException) as exc:
+            except (http.client.HTTPException, db.DbException,) as exc:
                 print(exc, file=sys.stderr)
                 self.statusBar().showMessage(
                     'Unsaved changes: Error while saving'
@@ -399,7 +446,8 @@ class DocWindow(qw.QMainWindow):
             try:
                 with open(filename, 'r') as import_file:
                     self._textedit.setPlainText(import_file.read())
-            except OSError:
+            except OSError as exc:
+                print(exc, file=sys.stderr)
                 qw.QMessageBox.critical(
                     self,
                     'Error',
@@ -420,7 +468,8 @@ class DocWindow(qw.QMainWindow):
             try:
                 with open(filename, 'w') as export_file:
                     print(self._textedit.toPlainText(), file=export_file)
-            except OSError:
+            except OSError as exc:
+                print(exc, file=sys.stderr)
                 qw.QMessageBox.critical(
                     self,
                     'Error',

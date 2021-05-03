@@ -103,7 +103,7 @@ class DbHelper:
     DB_DIR = 'MiptCisDocs'
     VERSION = 'v1'
     TABLE_NAME = f'users_files_{VERSION}'
-    SETUP_QUERY = '''
+    SETUP_DOCS_TABLE = '''
         CREATE TABLE IF NOT EXISTS {table} (
             doc_id BIGINT NOT NULL,
             user_id BIGINT NOT NULL,
@@ -114,13 +114,31 @@ class DbHelper:
             PRIMARY KEY(doc_id, user_id)
         );
     '''
+    SETUP_HOST_PORT_TABLE = '''
+        CREATE TABLE IF NOT EXISTS host_port (
+            id INT PRIMARY KEY,
+            host VARCHAR NOT NULL,
+            port VARCHAR NOT NULL
+        );
+    '''
+    HOST_PORT_ID = 42
+    SELECT_HOST_PORT = f'''
+        SELECT host, port FROM host_port WHERE id = {HOST_PORT_ID};
+    '''
+    INSERT_HOST_PORT = f'''
+        INSERT INTO host_port (id, host, port)
+        VALUES ({HOST_PORT_ID}, :host, :port)
+        ON CONFLICT (id) DO UPDATE SET host = :host, port = :port;
+    '''
 
     def __init__(self):
         self._db = qsql.QSqlDatabase.addDatabase('QSQLITE')
         writable_location = qc.QStandardPaths.writableLocation(
             qc.QStandardPaths.StandardLocation.AppDataLocation
         )
-        writable_location = os.path.abspath(os.path.join(writable_location, '..', self.DB_DIR))
+        writable_location = os.path.abspath(
+            os.path.join(writable_location, '..', self.DB_DIR)
+        )
         if not os.path.exists(writable_location):
             os.mkdir(writable_location)
         self._db.setDatabaseName(
@@ -130,13 +148,46 @@ class DbHelper:
             raise DbException(f'Error while opening db')
 
         query = qsql.QSqlQuery()
-        if not query.exec(self.SETUP_QUERY.format(table=self.TABLE_NAME)):
+        if not query.exec(self.SETUP_DOCS_TABLE.format(table=self.TABLE_NAME)):
             raise DbException(
-                f'Error while db setup: {query.lastError().text()}'
+                f'Error while SETUP_DOCS_TABLE: {query.lastError().text()}'
+            )
+        query = qsql.QSqlQuery()
+        if not query.exec(self.SETUP_HOST_PORT_TABLE):
+            raise DbException(
+                f'Error while SETUP_HOST_PORT_TABLE: {query.lastError().text()}'
             )
 
     def get_connector(self, user_id: int, doc_id: int) -> DbConnector:
         return DbConnector(self._db, self.TABLE_NAME, user_id, doc_id)
+
+    def set_host_port(self, host: str, port: str):
+        query = qsql.QSqlQuery()
+        if not query.prepare(self.INSERT_HOST_PORT):
+            raise DbException(
+                'Error while preparing INSERT_HOST_PORT: '
+                f'{query.lastError().text()}'
+            )
+        query.bindValue(':host', host)
+        query.bindValue(':port', port)
+        if not query.exec():
+            raise DbException(
+                'Error while executing INSERT_HOST_PORT: '
+                f'{query.lastError().text()}'
+            )
+
+    def get_host_port(self) -> typing.Tuple[str, str]:
+        query = qsql.QSqlQuery()
+        if not query.exec(self.SELECT_HOST_PORT):
+            raise DbException(
+                'Error while executing SELECT_HOST_PORT: '
+                f'{query.lastError().text()}'
+            )
+
+        host, port = '34.118.53.122', '80'
+        while query.next():
+            host, port = query.value(0), query.value(1)
+        return host, port
 
 
 class Stack(deque):
