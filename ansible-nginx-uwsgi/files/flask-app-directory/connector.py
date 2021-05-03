@@ -35,8 +35,8 @@ class Connector:
                 self.logger.info("Table %s created" % table_name)
             else:
                 self.logger.info("Table %s exists" % table_name)
-        except:
-            self.logger.info("Failed check_docs_table query")
+        except Exception as exception:
+            self.logger.info("Failed check_docs_table query, reason: %s" % exception)
 
     def check_users_table(self, table_name):
         try:
@@ -51,8 +51,8 @@ class Connector:
                 self.logger.info("Table %s created" % table_name)
             else:
                 self.logger.info("table %s exists" % table_name)
-        except:
-            self.logger.info("Failed check_users_table query")
+        except Exception as exception:
+            self.logger.info("Failed check_users_table query, reason: %s" % exception)
 
     def get_text(self, doc_id, user_id):
         return self.get_field("curr_text", doc_id, user_id)
@@ -81,8 +81,8 @@ class Connector:
             if record is None:
                 return record
             return record[self.field_to_id[field]]
-        except (Exception, psycopg2.Error):
-            self.logger.info("Failed get_field query")
+        except Exception as exception:
+            self.logger.info("Failed get_field query, reason: %s" % exception)
             return None
 
     def list_all_docs(self):
@@ -97,13 +97,9 @@ class Connector:
                 result.append({'title': row[self.field_to_id['title']],
                                'doc_id': row[self.field_to_id['doc_id']]})
             return result
-        except (Exception, psycopg2.Error):
-            self.logger.info("Failed get_field query")
+        except Exception as exception:
+            self.logger.info("Failed get_field query, reason: %s" % exception)
             return None
-        finally:
-            if self.connection:
-                self.cursor.close()
-                self.connection.close()
 
     def create_doc(self, title, doc_id, user_id):
         self.set_field("title", title, doc_id, user_id)
@@ -125,8 +121,8 @@ class Connector:
 
     def set_login(self, user_login, user_id):
         try:
-            sql_select_query = """select * from %s where login = %s"""
-            self.cursor.execute(sql_select_query, (AsIs(self.users_table_name), user_login))
+            sql_select_query = """select * from %s where login = '%s'"""
+            self.cursor.execute(sql_select_query % (self.users_table_name, user_login))
             record = self.cursor.fetchone()
 
             if record is None:
@@ -136,8 +132,8 @@ class Connector:
                 self.logger.info("User %s added to base" % user_login)
             else:
                 self.logger.info("User %s is already known" % user_login)
-        except (Exception, psycopg2.Error):
-            self.logger.info("Failed set_login query")
+        except Exception as exception:
+            self.logger.info("Failed set_login query, reason: %s" % exception)
 
     def update_doc(self, doc_id, user_id, received_version, edits):
         self.logger.info("Document %s accepted, old version %s" % (doc_id, received_version))
@@ -166,11 +162,6 @@ class Connector:
                 self.connection.commit()
 
             return True
-        except (Exception, psycopg2.Error):
-            self.logger.info("Failed set_field query")
+        except Exception as exception:
+            self.logger.info("Failed set_field query, reason: %s" % exception)
             return False
-
-        finally:
-            if self.connection:
-                self.cursor.close()
-                self.connection.close()

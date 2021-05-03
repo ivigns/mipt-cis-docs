@@ -16,3 +16,4 @@ markupsafe==1.1.1
     # via jinja2
 werkzeug==1.0.0
     # via flask
+psycopg2-binary==2.8.6

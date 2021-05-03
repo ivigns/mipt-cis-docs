@@ -4,7 +4,7 @@ import psycopg2
 import hashlib
 import logging
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
 from connector import Connector
 
 DEFAULT_DOCS_TABLE = "prod_docs"
@@ -52,7 +52,7 @@ def login():
     user_login = request_data['login']
     m = hashlib.md5()
     m.update(user_login.encode('utf-8'))
-    user_id = str(int(m.hexdigest(), 16))[0:6]
+    user_id = str(int(m.hexdigest(), 16))[0:8]
     db_connector.set_login(user_login, user_id)
     return json.dumps({'user_id': int(user_id)}), 200
 
@@ -75,7 +75,7 @@ def update_doc():
     doc_id = int(request_data['doc_id'])
     user_id = int(request_data['user_id'])
     new_version, new_edits = db_connector.update_doc(doc_id, user_id, received_version, edits)
-    return json.dumps({'edits': new_edits,
+    return json.dumps({'edits': new_edits or [],
                        'version': new_version}), 200
 
 
@@ -91,7 +91,14 @@ def get_doc():
 @app.route('/list_all_docs', methods=['GET'])
 def list_all_docs():
     docs = db_connector.list_all_docs()
-    return json.dumps({'docs': docs}), 200
+    return json.dumps({'docs': docs or []}), 200
+
+
+@app.route('/logs', methods=['GET'])
+def return_logs():
+    with open("/srv/myapp/appdata/flaskapp.log","r") as file:
+        content = file.readlines()
+    return Response(content, mimetype='text/plain')
 
 
 @app.route('/health', methods=['GET'])
