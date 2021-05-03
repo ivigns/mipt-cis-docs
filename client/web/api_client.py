@@ -11,7 +11,7 @@ from client.web.models.docs_list_response import DocsListResponse, DocsListItem
 from client.web.models.update_doc_request import UpdateDocRequest
 from client.web.models.update_doc_response import UpdateDocResponse
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('client')
 
 
 def catch_parse_errors(func: typing.Callable) -> typing.Callable:

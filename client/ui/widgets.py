@@ -16,7 +16,7 @@ from client.web.models.update_doc_request import UpdateDocRequest
 from diff_sync import client_diff_sync as diff_sync
 from client import resources
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('client')
 
 APP_NAME = 'MiptCisDocs'
 

@@ -7,7 +7,7 @@ import PyQt5.QtCore as qc
 import PyQt5.QtSql as qsql
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('client')
 
 
 class DbException(Exception):
