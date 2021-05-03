@@ -9,7 +9,7 @@ from client.data_manage import data_dir
 
 def _redirect_streams():
     logs_dir = data_dir.get_data_dir()
-    sys.stdout = open(os.path.join(logs_dir, 'info.log'), 'w')
+    sys.stdout = open(os.path.join(logs_dir, 'app.log'), 'w')
     sys.stderr = open(os.path.join(logs_dir, 'error.log'), 'w')
 
 
@@ -36,7 +36,9 @@ def main():
     faulthandler.enable()
     logger.info('Starting app')
     docs_app = app.DocsApp()
-    sys.exit(docs_app.exec())
+    exit_status = docs_app.exec()
+    logger.info('App exited with status %s', exit_status)
+    sys.exit(exit_status)
 
 
 if __name__ == '__main__':

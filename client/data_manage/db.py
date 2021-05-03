@@ -65,7 +65,7 @@ class DbConnector:
     def _set_field(self, field: str, value: typing.Union[str, int]):
         query = self.INSERT_QUERY.format(table=self._table_name, field=field)
         exec_query(
-            'INSERT_QUERY',
+            f'INSERT_QUERY, {field}',
             query,
             value=value,
             doc_id=self._doc_id,
@@ -75,7 +75,10 @@ class DbConnector:
     def _get_field(self, field: str) -> typing.Union[str, int]:
         query = self.SELECT_QUERY.format(table=self._table_name, field=field)
         records = exec_query(
-            'SELECT_QUERY', query, doc_id=self._doc_id, user_id=self._user_id,
+            f'SELECT_QUERY, {field}',
+            query,
+            doc_id=self._doc_id,
+            user_id=self._user_id,
         )
 
         value = 0 if field.endswith('version') else ''

@@ -79,8 +79,14 @@ class ApiClient:
         json_body = json.dumps(body)
         conn.request(method, query, json_body, headers)
         response = conn.getresponse()
-        response_body = json.loads(response.read().decode())
-        logger.info('Response from %s%s: %s', self._host, query, response_body)
+        response_json = response.read().decode()
+        logger.info(
+            'Response %s from %s%s: %s',
+            response.getcode(),
+            self._host,
+            query,
+            response_json,
+        )
         if response.getcode() != 200:
             raise http.client.HTTPException('Request failed')
-        return response_body
+        return json.loads(response_json)
