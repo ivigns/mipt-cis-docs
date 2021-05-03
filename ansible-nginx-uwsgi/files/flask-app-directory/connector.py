@@ -78,6 +78,9 @@ class Connector:
             sql_select_query = """select * from %s where doc_id = %s and user_id = %s"""
             self.cursor.execute(sql_select_query % (self.docs_table_name, doc_id, user_id))
             record = self.cursor.fetchone()
+            self.logger.info(
+                "Success get_field query, user_id, doc_id, field, value: %s %s %s %s" % (user_id, doc_id, field, record)
+            )
             if record is None:
                 return record
             return record[self.field_to_id[field]]
@@ -136,12 +139,12 @@ class Connector:
             self.logger.info("Failed set_login query, reason: %s" % exception)
 
     def update_doc(self, doc_id, user_id, received_version, edits):
-        self.logger.info("Document %s accepted, old version %s" % (doc_id, received_version))
+        self.logger.info("Update doc, document %s accepted, old version %s" % (doc_id, received_version))
         self.server_diff_sync = ServerDiffSync(self, edits, doc_id, user_id, self.logger)
         self.server_diff_sync.patch_edits(edits, received_version)
-        self.logger.info("Document %s patched" % doc_id)
+        self.logger.info("Update doc, document %s patched" % doc_id)
         self.server_diff_sync.update()
-        self.logger.info("Document %s updated")
+        self.logger.info("Update doc, document %s updated")
         return self.server_diff_sync.get_received_version(), self.server_diff_sync.get_edits()
 
     def set_field(self, field, value, doc_id, user_id):
@@ -160,7 +163,9 @@ class Connector:
                 self.cursor.execute(sql_update_query,
                                (AsIs(self.docs_table_name), AsIs(field), value, doc_id, user_id))
                 self.connection.commit()
-
+            self.logger.info(
+                "Success set_field query, user_id, doc_id, field, value: %s %s %s %s" % (user_id, doc_id, field, value)
+            )
             return True
         except Exception as exception:
             self.logger.info("Failed set_field query, reason: %s" % exception)
