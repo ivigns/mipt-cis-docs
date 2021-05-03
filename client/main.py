@@ -1,11 +1,20 @@
 import logging
 import faulthandler
+import os
 import sys
 
-import client.ui.app as app
+from client.ui import app
+from client.data_manage import data_dir
+
+
+def _redirect_streams():
+    logs_dir = data_dir.get_data_dir()
+    sys.stdout = open(os.path.join(logs_dir, 'info.log'), 'w')
+    sys.stderr = open(os.path.join(logs_dir, 'error.log'), 'w')
 
 
 def _get_logger() -> logging.Logger:
+    _redirect_streams()  # comment to watch logs in console
     formatter = logging.Formatter('%(asctime)s\t%(levelname)s\t%(message)s')
     info_handler = logging.StreamHandler(sys.stdout)
     info_handler.setLevel(logging.INFO)

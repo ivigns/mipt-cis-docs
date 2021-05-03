@@ -3,8 +3,8 @@ import sys
 import PyQt5.QtCore as qc
 import PyQt5.QtWidgets as qw
 
-import client.db.db as db
-import client.ui.widgets as widgets
+from client.data_manage import db
+from client.ui import widgets
 
 
 class DocsApp(qw.QApplication):

@@ -8,8 +8,9 @@ import PyQt5.QtCore as qc
 import PyQt5.QtGui as qgui
 import PyQt5.QtWidgets as qw
 
-from client.db import db
-import client.web.api_client as api_client
+from client.data_manage import db
+from client.data_manage import stack
+from client.web import api_client
 import client.web.http_connection_mock as conn_mock
 from client.web.models.create_doc_request import CreateDocRequest
 from client.web.models.update_doc_request import UpdateDocRequest
@@ -305,7 +306,9 @@ class DocWindow(qw.QMainWindow):
         self._user_id = user_id
         self._saved = False
         db_connector = self._app.db_helper.get_connector(user_id, doc_id)
-        self._diff_sync = diff_sync.ClientDiffSync(db_connector, db.Stack([]))
+        self._diff_sync = diff_sync.ClientDiffSync(
+            db_connector, stack.Stack([])
+        )
 
         self._textedit = qw.QTextEdit()
         self._load_text()
@@ -438,7 +441,7 @@ class DocWindow(qw.QMainWindow):
                     )
                     response = self._app.web_client.update_doc(request)
                     self._diff_sync.patch_edits(
-                        db.Stack(response.edits), response.version
+                        stack.Stack(response.edits), response.version
                     )
                 text = self._diff_sync.db_connector.get_text()
             except (http.client.HTTPException, db.DbException,) as exc:
@@ -469,6 +472,8 @@ class DocWindow(qw.QMainWindow):
                     'Cannot read selected file',
                     qw.QMessageBox.StandardButton.Ok,
                 )
+            else:
+                logger.info('Import doc from %s', filename)
 
         self._on_save()
 
@@ -491,6 +496,8 @@ class DocWindow(qw.QMainWindow):
                     'Cannot write in selected file',
                     qw.QMessageBox.StandardButton.Ok,
                 )
+            else:
+                logger.info('Export doc to %s', filename)
 
     def closeEvent(self, event: qgui.QCloseEvent):
         self._on_save()
