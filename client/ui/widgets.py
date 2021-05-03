@@ -251,7 +251,7 @@ class MainWindow(qw.QMainWindow):
             )
             return
 
-        doc_id = uuid.uuid1().int >> 64
+        doc_id = uuid.uuid1().int >> 65
         request = CreateDocRequest(title, self._user_id, doc_id)
         try:
             self._app.web_client.create_doc(request)
@@ -274,12 +274,17 @@ class MainWindow(qw.QMainWindow):
         self._app.focus = self._app.FOCUS_LOGIN
 
         self._app.login_window.show()
+        docs = list(self._opened_docs.values())
+        for doc in docs:
+            doc.close()
         self.close()
 
     @qc.pyqtSlot(str)
     def on_doc_closed(self, doc_id: str):
         if int(doc_id) in self._opened_docs:
             self._opened_docs.pop(int(doc_id))
+        else:
+            print('Tried to close already closed doc', file=sys.stderr)
 
 
 class DocWindow(qw.QMainWindow):

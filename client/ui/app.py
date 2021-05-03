@@ -19,6 +19,5 @@ class DocsApp(qw.QApplication):
         self.main_window = None
         self.login_window = widgets.LoginWindow(self)
         self.focus = self.FOCUS_LOGIN
-        print('focus on app start ', self.focus)
 
         self.login_window.show()
