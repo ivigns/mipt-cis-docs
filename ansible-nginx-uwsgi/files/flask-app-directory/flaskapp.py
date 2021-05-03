@@ -76,7 +76,7 @@ def update_doc():
     doc_id = int(request_data['doc_id'])
     user_id = int(request_data['user_id'])
     new_version, new_edits = db_connector.update_doc(doc_id, user_id, received_version, edits)
-    return json.dumps({'edits': new_edits or [],
+    return json.dumps({'edits': new_edits.get_values_list() or [],
                        'version': new_version}), 200
 
 

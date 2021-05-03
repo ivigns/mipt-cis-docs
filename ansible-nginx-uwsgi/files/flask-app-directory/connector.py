@@ -2,6 +2,7 @@ import psycopg2
 
 from psycopg2.extensions import AsIs
 from server_diff_sync import ServerDiffSync
+from mock_stack import MockStack
 
 
 class Connector:
@@ -22,12 +23,12 @@ class Connector:
                 (table_name,))
             if not self.cursor.fetchone()[0]:
                 self.logger.info("creating table %s" % table_name)
-                sqlCreateTable = "create table " + table_name + " (curr_text text null, " \
-                                                                "shadow text null, " \
-                                                                "backup text null, " \
+                sqlCreateTable = "create table " + table_name + " (curr_text text null DEFAULT '', " \
+                                                                "shadow text null DEFAULT '', " \
+                                                                "backup text null DEFAULT '', " \
                                                                 "doc_id bigint not null, " \
                                                                 "user_id bigint not null, " \
-                                                                "title text not null, " \
+                                                                "title text not null DEFAULT '', " \
                                                                 "server_version int not null DEFAULT 0, " \
                                                                 "client_version int not null DEFAULT 0);"
                 self.cursor.execute(sqlCreateTable)
@@ -66,15 +67,19 @@ class Connector:
     def get_client_version(self, doc_id, user_id):
         version = self.get_field("client_version", doc_id, user_id)
         if version is not None:
+            self.logger.info("Success get_client_version query, value: %s" % version)
             return version
         else:
+            self.logger.info("Success get_client_version query, value: %d" % 0)
             return 0
 
     def get_server_version(self, doc_id, user_id):
         version = self.get_field("server_version", doc_id, user_id)
         if version is not None:
+            self.logger.info("Success get_server_version query, value: %s" % version)
             return version
         else:
+            self.logger.info("Success get_server_version query, value: %d" % 0)
             return 0
 
     def get_field(self, field, doc_id, user_id):
@@ -143,12 +148,13 @@ class Connector:
             self.logger.info("Failed set_login query, reason: %s" % exception)
 
     def update_doc(self, doc_id, user_id, received_version, edits):
-        self.logger.info("Update doc, document %s accepted, old version %s" % (doc_id, received_version))
-        self.server_diff_sync = ServerDiffSync(self, edits, doc_id, user_id, self.logger)
-        self.server_diff_sync.patch_edits(edits, received_version)
+        edits_stack = MockStack(edits)
+        self.logger.info("Update doc, document %s accepted, old version %s, edits %s" % (doc_id, received_version, edits))
+        self.server_diff_sync = ServerDiffSync(self, edits_stack, doc_id, user_id, self.logger)
+        self.server_diff_sync.patch_edits(edits_stack, received_version)
         self.logger.info("Update doc, document %s patched" % doc_id)
         self.server_diff_sync.update()
-        self.logger.info("Update doc, document %s updated")
+        self.logger.info("Update doc, document %s updated" % doc_id)
         return self.server_diff_sync.get_received_version(), self.server_diff_sync.get_edits()
 
     def set_field(self, field, value, doc_id, user_id):

@@ -1,6 +1,9 @@
 class MockStack:
-    def __init__(self):
-        self.stack = []
+    def __init__(self, input_stack=[]):
+        self.stack = input_stack
+
+    def get_values_list(self):
+        return self.stack
 
     def push(self, value):
         self.stack.append(value)
