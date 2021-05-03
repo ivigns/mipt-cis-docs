@@ -1,4 +1,5 @@
 import http.client
+import logging
 import sys
 import typing
 import uuid
@@ -14,6 +15,8 @@ from client.web.models.create_doc_request import CreateDocRequest
 from client.web.models.update_doc_request import UpdateDocRequest
 from diff_sync import client_diff_sync as diff_sync
 from client import resources
+
+logger = logging.getLogger(__name__)
 
 APP_NAME = 'MiptCisDocs'
 
@@ -47,7 +50,7 @@ class LoginWindow(qw.QWidget):
         try:
             host, port = self._app.db_helper.get_host_port()
         except db.DbException as exc:
-            print(exc, file=sys.stderr)
+            logger.exception(exc)
             host, port = '', ''
 
         self._host_edit = qw.QLineEdit()
@@ -111,7 +114,7 @@ class LoginWindow(qw.QWidget):
         try:
             user_id = web_client.login(login)
         except http.client.HTTPException as exc:
-            print(exc, file=sys.stderr)
+            logger.exception(exc)
             qw.QMessageBox.critical(
                 self,
                 'Error',
@@ -123,7 +126,7 @@ class LoginWindow(qw.QWidget):
         try:
             self._app.db_helper.set_host_port(host, port)
         except db.DbException as exc:
-            print(exc, file=sys.stderr)
+            logger.exception(exc)
         self._app.web_client = web_client
         self._app.main_window = MainWindow(
             self._app, login, user_id, f'{host}:{port}'
@@ -208,7 +211,7 @@ class MainWindow(qw.QMainWindow):
         try:
             response = self._app.web_client.list_all_docs()
         except http.client.HTTPException as exc:
-            print(exc, file=sys.stderr)
+            logger.exception(exc)
             self.statusBar().showMessage(
                 'Error while connecting to server', self.STATUS_TIMEOUT
             )
@@ -256,7 +259,7 @@ class MainWindow(qw.QMainWindow):
         try:
             self._app.web_client.create_doc(request)
         except http.client.HTTPException as exc:
-            print(exc, file=sys.stderr)
+            logger.exception(exc)
             self.statusBar().showMessage(
                 'Error while connecting to server', self.STATUS_TIMEOUT
             )
@@ -284,7 +287,7 @@ class MainWindow(qw.QMainWindow):
         if int(doc_id) in self._opened_docs:
             self._opened_docs.pop(int(doc_id))
         else:
-            print('Tried to close already closed doc', file=sys.stderr)
+            logger.error('Tried to close already closed doc')
 
 
 class DocWindow(qw.QMainWindow):
@@ -371,7 +374,7 @@ class DocWindow(qw.QMainWindow):
         try:
             text = self._diff_sync.db_connector.get_text()
         except db.DbException as exc:
-            print(exc, file=sys.stderr)
+            logger.exception(exc)
             qw.QMessageBox.critical(
                 self,
                 'Error',
@@ -439,7 +442,7 @@ class DocWindow(qw.QMainWindow):
                     )
                 text = self._diff_sync.db_connector.get_text()
             except (http.client.HTTPException, db.DbException,) as exc:
-                print(exc, file=sys.stderr)
+                logger.exception(exc)
                 self.statusBar().showMessage(
                     'Unsaved changes: Error while saving'
                 )
@@ -459,7 +462,7 @@ class DocWindow(qw.QMainWindow):
                 with open(filename, 'r') as import_file:
                     self._textedit.setPlainText(import_file.read())
             except OSError as exc:
-                print(exc, file=sys.stderr)
+                logger.exception(exc)
                 qw.QMessageBox.critical(
                     self,
                     'Error',
@@ -481,7 +484,7 @@ class DocWindow(qw.QMainWindow):
                 with open(filename, 'w') as export_file:
                     print(self._textedit.toPlainText(), file=export_file)
             except OSError as exc:
-                print(exc, file=sys.stderr)
+                logger.exception(exc)
                 qw.QMessageBox.critical(
                     self,
                     'Error',

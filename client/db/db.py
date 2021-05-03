@@ -1,9 +1,13 @@
 from collections import deque
+import logging
 import os
 import typing
 
 import PyQt5.QtCore as qc
 import PyQt5.QtSql as qsql
+
+
+logger = logging.getLogger(__name__)
 
 
 class DbException(Exception):
@@ -51,6 +55,7 @@ class DbConnector:
                 'Error while executing INSERT_QUERY: '
                 f'{query.lastError().text()}'
             )
+        logger.info('Executed query: %s', query.executedQuery())
 
     def _get_field(self, field: str) -> typing.Union[str, int]:
         query = qsql.QSqlQuery()
@@ -68,6 +73,7 @@ class DbConnector:
                 'Error while executing SELECT_QUERY: '
                 f'{query.lastError().text()}'
             )
+        logger.info('Executed query: %s', query.executedQuery())
 
         value = 0 if field.endswith('version') else ''
         while query.next():
@@ -152,11 +158,13 @@ class DbHelper:
             raise DbException(
                 f'Error while SETUP_DOCS_TABLE: {query.lastError().text()}'
             )
+        logger.info('Executed query: %s', query.executedQuery())
         query = qsql.QSqlQuery()
         if not query.exec(self.SETUP_HOST_PORT_TABLE):
             raise DbException(
                 f'Error while SETUP_HOST_PORT_TABLE: {query.lastError().text()}'
             )
+        logger.info('Executed query: %s', query.executedQuery())
 
     def get_connector(self, user_id: int, doc_id: int) -> DbConnector:
         return DbConnector(self._db, self.TABLE_NAME, user_id, doc_id)
@@ -175,6 +183,7 @@ class DbHelper:
                 'Error while executing INSERT_HOST_PORT: '
                 f'{query.lastError().text()}'
             )
+        logger.info('Executed query: %s', query.executedQuery())
 
     def get_host_port(self) -> typing.Tuple[str, str]:
         query = qsql.QSqlQuery()
@@ -183,6 +192,7 @@ class DbHelper:
                 'Error while executing SELECT_HOST_PORT: '
                 f'{query.lastError().text()}'
             )
+        logger.info('Executed query: %s', query.executedQuery())
 
         host, port = '34.118.53.122', '80'
         while query.next():
