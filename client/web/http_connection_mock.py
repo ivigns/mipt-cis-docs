@@ -62,7 +62,9 @@ class HTTPConnectionMock:
             self._response_code = 200
         elif (method, query) == ('POST', '/update_doc'):
             self._response_dict = {
-                'version': body['edits'][-1][1],
+                'version': body['edits'][-1][1]
+                if body['edits']
+                else body['version'],
                 'edits': [],
             }
             self._response_code = 200

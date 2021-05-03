@@ -133,6 +133,8 @@ class DbHelper:
         );
     '''
     HOST_PORT_ID = 42
+    DEFAULT_HOST = '34.68.39.184'
+    DEFAULT_PORT = 80
     SELECT_HOST_PORT = f'''
         SELECT host, port FROM host_port WHERE id = {HOST_PORT_ID};
     '''
@@ -166,7 +168,7 @@ class DbHelper:
     def get_host_port(self) -> typing.Tuple[str, str]:
         records = exec_query('SELECT_HOST_PORT', self.SELECT_HOST_PORT)
 
-        host, port = '35.228.177.41', '80'
+        host, port = self.DEFAULT_HOST, self.DEFAULT_PORT
         for record in records:
             host, port = record
         return host, port

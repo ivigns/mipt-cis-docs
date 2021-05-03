@@ -242,6 +242,7 @@ class MainWindow(qw.QMainWindow):
             doc_window = DocWindow(
                 self._app, doc.doc_id, doc.text(), self._user_id,
             )
+            doc_window.activateWindow()
             self._opened_docs[doc.doc_id] = doc_window
 
     @qc.pyqtSlot()
@@ -292,7 +293,7 @@ class MainWindow(qw.QMainWindow):
 
 
 class DocWindow(qw.QMainWindow):
-    TIMER_TIMEOUT = 5000
+    TIMER_TIMEOUT = 3000
     _closed = qc.pyqtSignal(str)
 
     def __init__(
@@ -305,13 +306,14 @@ class DocWindow(qw.QMainWindow):
         self._title = title
         self._user_id = user_id
         self._saved = False
+        self._status_message = None
         db_connector = self._app.db_helper.get_connector(user_id, doc_id)
         self._diff_sync = diff_sync.ClientDiffSync(
             db_connector, stack.Stack([])
         )
 
         self._textedit = qw.QTextEdit()
-        self._load_text()
+        self._load_doc()
 
         layout = qw.QVBoxLayout()
         layout.addWidget(self._textedit)
@@ -327,7 +329,7 @@ class DocWindow(qw.QMainWindow):
             '&Export', self._on_export, qgui.QKeySequence.StandardKey.SaveAs
         )
         file_menu.addAction(
-            '&Save', self._on_save, qgui.QKeySequence.StandardKey.Save
+            '&Save', self._save_doc, qgui.QKeySequence.StandardKey.Save
         )
         file_menu.addAction(
             'Save and &close', self.close, qgui.QKeySequence.StandardKey.Close
@@ -363,7 +365,7 @@ class DocWindow(qw.QMainWindow):
         self._timer.start()
 
         self._textedit.textChanged.connect(self._on_edit)
-        self._timer.timeout.connect(self._on_save)
+        self._timer.timeout.connect(self._on_timer_timeout)
         self._closed.connect(self._app.main_window.on_doc_closed)
 
         self.setWindowTitle(f'{APP_NAME} - {self._title}')
@@ -371,9 +373,9 @@ class DocWindow(qw.QMainWindow):
         center_window(self, 500, 700)
 
         self.show()
-        self._on_save()
+        self._save_doc(force=True)
 
-    def _load_text(self):
+    def _load_doc(self):
         try:
             text = self._diff_sync.db_connector.get_text()
         except db.DbException as exc:
@@ -389,17 +391,18 @@ class DocWindow(qw.QMainWindow):
         else:
             self._textedit.setPlainText(text)
 
-    @qc.pyqtSlot(bool)
-    def _change_status(self, status: bool):
-        self._saved = status
-        if self._saved:
-            self.statusBar().showMessage('Saved')
-        else:
-            self.statusBar().showMessage('Unsaved changes')
+    def _show_status(self):
+        text_status = 'Saved' if self._saved else 'Unsaved changes'
+        self.statusBar().showMessage(
+            text_status
+            + (f': {self._status_message}' if self._status_message else '')
+        )
 
     @qc.pyqtSlot()
     def _on_edit(self):
-        self._change_status(False)
+        self._saved = False
+        self._status_message = None
+        self._show_status()
 
     def _set_text(self, text: str):
         cursor = self._textedit.textCursor()
@@ -427,13 +430,20 @@ class DocWindow(qw.QMainWindow):
         self._textedit.setTextCursor(new_cursor)
 
     @qc.pyqtSlot()
-    def _on_save(self):
-        if not self._saved:
+    def _on_timer_timeout(self):
+        self._save_doc(force=True)
+
+    @qc.pyqtSlot()
+    def _save_doc(self, force=False):
+        saved_to_server = False
+
+        if not self._saved or force:
             try:
                 self._diff_sync.db_connector.set_text(
                     self._textedit.toPlainText()
                 )
-                if self._diff_sync.update():
+                updated = self._diff_sync.update()
+                if updated or force:
                     edits = self._diff_sync.get_edits()
                     version = self._diff_sync.get_received_version()
                     request = UpdateDocRequest(
@@ -443,17 +453,19 @@ class DocWindow(qw.QMainWindow):
                     self._diff_sync.patch_edits(
                         stack.Stack(response.edits), response.version
                     )
+                    saved_to_server = True
                 text = self._diff_sync.db_connector.get_text()
-            except (http.client.HTTPException, db.DbException,) as exc:
+            except (http.client.HTTPException, db.DbException) as exc:
                 logger.exception(exc)
-                self.statusBar().showMessage(
-                    'Unsaved changes: Error while saving'
-                )
-                return
+                self._saved = False
+                self._status_message = 'Error while saving'
             else:
                 self._set_text(text)
+                if saved_to_server:
+                    self._saved = True
+                    self._status_message = None
 
-        self._change_status(True)
+        self._show_status()
 
     @qc.pyqtSlot()
     def _on_import(self):
@@ -475,11 +487,11 @@ class DocWindow(qw.QMainWindow):
             else:
                 logger.info('Import doc from %s', filename)
 
-        self._on_save()
+        self._save_doc()
 
     @qc.pyqtSlot()
     def _on_export(self):
-        self._on_save()
+        self._save_doc()
 
         filename, _ = qw.QFileDialog.getSaveFileName(
             self, 'Export document', f'{self._title}.txt', 'Text files (*.txt)'
@@ -500,6 +512,7 @@ class DocWindow(qw.QMainWindow):
                 logger.info('Export doc to %s', filename)
 
     def closeEvent(self, event: qgui.QCloseEvent):
-        self._on_save()
+        self._save_doc()
         self._closed.emit(str(self._doc_id))
+        self._timer.stop()
         event.accept()
