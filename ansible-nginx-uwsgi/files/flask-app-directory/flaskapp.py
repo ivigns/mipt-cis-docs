@@ -7,7 +7,8 @@ import logging
 from flask import Flask, jsonify, request, Response
 from connector import Connector
 
-DEFAULT_DOCS_TABLE = "prod_docs"
+DEFAULT_DOCS_INFO_TABLE = "prod_docs"
+DEFAULT_DOCS_TEXTS_TABLE = "prod_docs_texts"
 DEFAULT_USERS_TABLE = "prod_users"
 
 app = Flask(__name__)
@@ -29,22 +30,29 @@ postgresConnection = psycopg2.connect(user="pg_admin_user",
 )
 postgresConnection.autocommit = True
 cursor = postgresConnection.cursor()
-field_to_id = {"curr_text": 0,
-               "shadow": 1,
-               "backup": 2,
-               "doc_id": 3,
-               "user_id": 4,
-               "title": 5,
-               "server_version": 6,
-               "client_version": 7}
-db_connector = Connector(docs_table_name=DEFAULT_DOCS_TABLE,
+field_to_id_docs_info = {
+    "shadow": 0,
+    "backup": 1,
+    "doc_id": 2,
+    "user_id": 3,
+    "server_version": 4,
+    "client_version": 5
+}
+field_to_id_docs_texts = {
+    "curr_text": 0,
+    "doc_id": 1,
+    "title": 2
+}
+db_connector = Connector(docs_info_table_name=DEFAULT_DOCS_INFO_TABLE,
+                         docs_texts_table_name=DEFAULT_DOCS_TEXTS_TABLE,
                          users_table_name=DEFAULT_USERS_TABLE,
-                         field_to_id=field_to_id,
+                         field_to_id_docs_info=field_to_id_docs_info,
+                         field_to_id_docs_texts=field_to_id_docs_texts,
                          connection=postgresConnection,
                          logger=app.logger)
 
-db_connector.check_docs_table(DEFAULT_DOCS_TABLE)
-db_connector.check_users_table(DEFAULT_USERS_TABLE)
+db_connector.check_docs_table()
+db_connector.check_users_table()
 
 
 @app.route('/login', methods=['POST'])
