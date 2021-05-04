@@ -133,7 +133,7 @@ class DbHelper:
         );
     '''
     HOST_PORT_ID = 42
-    DEFAULT_HOST = '34.68.39.184'
+    DEFAULT_HOST = '34.123.108.34'
     DEFAULT_PORT = '80'
     SELECT_HOST_PORT = f'''
         SELECT host, port FROM host_port WHERE id = {HOST_PORT_ID};
