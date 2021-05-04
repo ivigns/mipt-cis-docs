@@ -1,0 +1,33 @@
+---
+- name: Remove base directory (if present)
+  file:
+    path: '{{ base_dir }}'
+    state: absent
+
+- name: Create empty base directory
+  file:
+    path: '{{ base_dir }}'
+    state: directory
+
+- name: Create a virtual environment
+  command: "{{ venv_full_cmd }} '{{ venv_dir }}'"
+
+- name: Ansible copy file to remote server
+  copy:
+    src: flask-app-directory/
+    dest: "{{ appdata_dir }}"
+
+- name: Chmod appdata dir for logging permission
+  command: chmod 777 /srv/myapp/appdata/
+  become: yes
+
+- name: Install requirements.txt
+  command: "'{{ venv_dir }}/bin/pip' install -r '{{ appdata_dir }}/requirements.txt'"
+
+- name: Set permissions for base directory
+  file:
+    path: '{{ base_dir }}'
+    owner: '{{ uid }}'
+    group: '{{ gid }}'
+    state: directory
+    recurse: yes
