@@ -39,11 +39,13 @@ class ServerDiffSync:
             self.server_version -= 1
         else:
             self.filter_stack(received_version)
-
+        text_patch_result = ''
+        shadow_patch_result = ''
         while not edits.empty():
             edit = edits.top()
             edits.pop()
             if edit[1] >= self.client_version:
+                self.logger.info("Update doc: patch edits, running dmp patch apply: edits version, client version: %s, %s" % (edit[1], self.client_version))
                 if shadow is None:
                     shadow = self.db_connector.get_shadow(self.doc_id, self.user_id)
                 if text is None:
@@ -57,12 +59,15 @@ class ServerDiffSync:
                 text_patch_result = self.dmp.patch_apply(patch, text)
                 text = text_patch_result[0]
 
+        self.logger.info("Update doc: patch edits - text, text_patch_result, shadow, shadow_patch_result: %s, %s, %s, %s" % (text, text_patch_result, shadow, shadow_patch_result))
         if text is not None and shadow is not None:
             self.db_connector.set_shadow(shadow, self.doc_id, self.user_id)
             self.db_connector.set_backup(shadow, self.doc_id, self.user_id)
             self.db_connector.set_text(text, self.doc_id, self.user_id)
             self.client_version += 1
             self.db_connector.set_client_version(self.client_version, self.doc_id, self.user_id)
+        self.logger.info(
+            "Update doc: patch edits - client_version %s" % self.client_version)
 
     def filter_stack(self, version):
         while not self.edits_stack.empty() and self.edits_stack.top()[1] <= version:
