@@ -57,13 +57,14 @@ class HTTPConnectionMock:
 
         # imitate handlers
         body = json.loads(json_body)
-        print(f'REQUEST: {body}')
         if (method, query) == ('POST', '/login'):
             self._response_dict = {'user_id': 5316191164430650570}
             self._response_code = 200
         elif (method, query) == ('POST', '/update_doc'):
             self._response_dict = {
-                'version': body['edits'][-1][1],
+                'version': body['edits'][-1][1]
+                if body['edits']
+                else body['version'],
                 'edits': [],
             }
             self._response_code = 200
@@ -82,5 +83,4 @@ class HTTPConnectionMock:
             self._response_code = 404
 
     def getresponse(self) -> HTTPResponseMock:
-        print(f'RESPONSE {self._response_code}: {self._response_dict}')
         return HTTPResponseMock(self._response_dict, self._response_code)
