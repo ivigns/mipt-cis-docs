@@ -327,6 +327,25 @@ class MainWindow(qw.QMainWindow):
         event.accept()
 
 
+def _set_cursor_pos(
+    position_tuple: typing.Tuple[int, int],
+    mode: qgui.QTextCursor.MoveMode,
+    cursor: qgui.QTextCursor,
+):
+    line = position_tuple[0]
+    column = position_tuple[1]
+
+    cursor.setPosition(0, mode)
+    cursor.movePosition(
+        qgui.QTextCursor.MoveOperation.Down, mode, line,
+    )
+
+    column = min(column, cursor.block().length())
+    cursor.movePosition(
+        qgui.QTextCursor.MoveOperation.Right, mode, column,
+    )
+
+
 class DocWindow(qw.QMainWindow):
     TIMER_TIMEOUT = 3000
     _closed = qc.pyqtSignal(str)
@@ -476,10 +495,13 @@ class DocWindow(qw.QMainWindow):
 
     def _set_text(self, text: str):
         cursor = self._textedit.textCursor()
-        cursor_pos = cursor.position()
+        cursor_pos = (cursor.blockNumber(), cursor.columnNumber())
         cursor_anchor = None
         if cursor.hasSelection():
-            cursor_anchor = cursor.anchor()
+            cursor.setPosition(
+                cursor.anchor(), qgui.QTextCursor.MoveMode.MoveAnchor
+            )
+            cursor_anchor = (cursor.blockNumber(), cursor.columnNumber())
 
         cursor = qgui.QTextCursor(self._textedit.document())
         cursor.select(qgui.QTextCursor.SelectionType.Document)
@@ -487,15 +509,15 @@ class DocWindow(qw.QMainWindow):
 
         new_cursor = self._textedit.textCursor()
         if cursor_anchor is not None:
-            new_cursor.setPosition(
-                cursor_anchor, qgui.QTextCursor.MoveMode.MoveAnchor
+            _set_cursor_pos(
+                cursor_anchor, qgui.QTextCursor.MoveMode.MoveAnchor, new_cursor
             )
-            new_cursor.setPosition(
-                cursor_pos, qgui.QTextCursor.MoveMode.KeepAnchor
+            _set_cursor_pos(
+                cursor_pos, qgui.QTextCursor.MoveMode.KeepAnchor, new_cursor
             )
         else:
-            new_cursor.setPosition(
-                cursor_pos, qgui.QTextCursor.MoveMode.MoveAnchor
+            _set_cursor_pos(
+                cursor_pos, qgui.QTextCursor.MoveMode.MoveAnchor, new_cursor
             )
         self._textedit.setTextCursor(new_cursor)
 
