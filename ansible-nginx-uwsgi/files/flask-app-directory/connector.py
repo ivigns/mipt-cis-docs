@@ -39,7 +39,7 @@ class Connector:
                 self.cursor.execute(sqlCreateTable)
                 self.logger.info("Tables %s, %s created" % (self.docs_info_table_name, self.docs_texts_table_name))
             else:
-                self.logger.info("Tables %s, %s created" % (self.docs_info_table_name, self.docs_texts_table_name))
+                self.logger.info("Tables %s, %s exists" % (self.docs_info_table_name, self.docs_texts_table_name))
         except Exception as exception:
             self.logger.info("Failed check_docs_table query, reason: %s" % exception)
 
@@ -175,9 +175,9 @@ class Connector:
     def update_doc(self, doc_id, user_id, received_version, edits):
         edits_stack = MockStack(edits)
         self.logger.info("Update doc, document %s accepted, old version %s, edits %s" % (doc_id, received_version, edits))
-        self.server_diff_sync = ServerDiffSync(self, edits_stack, doc_id, user_id, self.logger)
+        self.server_diff_sync = ServerDiffSync(self, MockStack(), doc_id, user_id, self.logger)
         self.server_diff_sync.patch_edits(edits_stack, received_version)
-        self.logger.info("Update doc, document %s patched" % doc_id)
+        self.logger.info("Update doc, document %s patched, ready to update" % doc_id)
         self.server_diff_sync.update()
         self.logger.info("Update doc, document %s updated" % doc_id)
         return self.server_diff_sync.get_received_version(), self.server_diff_sync.get_edits()
