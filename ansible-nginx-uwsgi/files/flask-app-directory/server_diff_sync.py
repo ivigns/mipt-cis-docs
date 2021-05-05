@@ -33,18 +33,20 @@ class ServerDiffSync:
     def patch_edits(self, edits, received_version):
         shadow, text = None, None
 
-        if received_version < self.server_version:
-            self.edits_stack.clear()
-            shadow = self.db_connector.get_backup(self.doc_id, self.user_id)
-            self.server_version -= 1
-        else:
-            self.filter_stack(received_version)
         text_patch_result = ''
         shadow_patch_result = ''
         while not edits.empty():
             edit = edits.top()
             edits.pop()
             if edit[1] >= self.client_version:
+                if shadow is None or text is None:
+                    if received_version < self.server_version:
+                        self.edits_stack.clear()
+                        shadow = self.db_connector.get_backup(self.doc_id, self.user_id)
+                        self.server_version -= 1
+                    else:
+                        self.filter_stack(received_version)
+
                 self.logger.info("Update doc: patch edits, running dmp patch apply: edits version, client version: %s, %s" % (edit[1], self.client_version))
                 if shadow is None:
                     shadow = self.db_connector.get_shadow(self.doc_id, self.user_id)
