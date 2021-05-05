@@ -1,5 +1,5 @@
 class MockStack:
-    def __init__(self, input_stack=[]):
+    def __init__(self, input_stack):
         self.stack = input_stack
 
     def get_values_list(self):

@@ -50,7 +50,7 @@ class Connector:
                 (self.users_table_name,))
             if not self.cursor.fetchone()[0]:
                 self.logger.info("creating table %s" % self.users_table_name)
-                sqlCreateTable = "create table " + self.users_table_name + " (login text not null, user_id int not null);"
+                sqlCreateTable = "create table " + self.users_table_name + " (login text not null, user_id int not null, is_online int not null DEFAULT 0);"
                 self.cursor.execute(sqlCreateTable)
                 
                 self.logger.info("Table %s created" % self.users_table_name)
@@ -166,16 +166,33 @@ class Connector:
                 self.cursor.execute("INSERT INTO %s (login, user_id) VALUES(%s, %s)",
                                     (AsIs(self.users_table_name), user_login, user_id))
                 
-                self.logger.info("User %s added to base" % user_login)
+                self.logger.info("New user %s added to base" % user_login)
             else:
-                self.logger.info("User %s is already known" % user_login)
+                sql_select_query = """select * from %s where login = '%s' and is_online = 1"""
+                self.cursor.execute(sql_select_query % (self.users_table_name, user_login))
+                user_is_online = self.cursor.fetchone()
+                if user_is_online is not None:
+                    self.logger.info("User %s is already online, access denied" % user_login)
+                    return False
+                else:
+                    sql_update_query = """Update %s set %s = %s where login = %s"""
+                    self.cursor.execute(sql_update_query %
+                                        (self.users_table_name, "is_online", 1, user_login))
+                    self.logger.info("User %s is online" % user_login)
+                    return True
         except Exception as exception:
             self.logger.info("Failed set_login query, reason: %s" % exception)
+
+    def logout(self, user_login):
+        sql_update_query = """Update %s set %s = %s where login = %s"""
+        self.cursor.execute(sql_update_query %
+                            (self.users_table_name, "is_online", 0, user_login))
+        self.logger.info("User %s is logged out" % user_login)
 
     def update_doc(self, doc_id, user_id, received_version, edits):
         edits_stack = MockStack(edits)
         self.logger.info("Update doc, document %s accepted, old version %s, edits %s" % (doc_id, received_version, edits))
-        self.server_diff_sync = ServerDiffSync(self, MockStack(), doc_id, user_id, self.logger)
+        self.server_diff_sync = ServerDiffSync(self, MockStack([]), doc_id, user_id, self.logger)
         self.server_diff_sync.patch_edits(edits_stack, received_version)
         self.logger.info("Update doc, document %s patched, ready to update" % doc_id)
         self.server_diff_sync.update()
