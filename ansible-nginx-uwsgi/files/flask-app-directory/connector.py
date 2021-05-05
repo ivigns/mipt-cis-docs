@@ -185,7 +185,7 @@ class Connector:
             self.logger.info("Failed set_login query, reason: %s" % exception)
 
     def logout(self, user_login):
-        sql_update_query = """Update %s set %s = %s where login = %s"""
+        sql_update_query = """Update %s set %s = %s where login = '%s'"""
         self.cursor.execute(sql_update_query %
                             (self.users_table_name, "is_online", 0, user_login))
         self.logger.info("User %s is logged out" % user_login)
