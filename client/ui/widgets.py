@@ -114,6 +114,14 @@ class LoginWindow(qw.QWidget):
         )
         try:
             user_id = web_client.login(login)
+        except api_client.NotAllowed:
+            qw.QMessageBox.warning(
+                self,
+                'Error',
+                'This user is already logged in. Try other user.',
+                qw.QMessageBox.StandardButton.Ok,
+            )
+            return
         except http.client.HTTPException as exc:
             logger.exception(exc)
             qw.QMessageBox.critical(
@@ -154,6 +162,7 @@ class MainWindow(qw.QMainWindow):
     def __init__(self, app: typing.Any, login: str, user_id: int, host: str):
         super().__init__()
 
+        self._login = login
         self._user_id = user_id
         self._app = app
         self._opened_docs = {}
@@ -269,20 +278,41 @@ class MainWindow(qw.QMainWindow):
 
         self._on_docs_list_update()
 
+    def _logout_from_server(self):
+        retry = True
+        while retry:
+            try:
+                self._app.web_client.logout(self._login)
+            except http.client.HTTPException as exc:
+                logger.exception(exc)
+                pressed = qw.QMessageBox.warning(
+                    self,
+                    'Warning',
+                    'Cannot log out from server',
+                    qw.QMessageBox.StandardButton.Close
+                    | qw.QMessageBox.StandardButton.Retry,
+                    qw.QMessageBox.StandardButton.Retry,
+                )
+                if pressed != qw.QMessageBox.StandardButton.Retry:
+                    retry = False
+            else:
+                retry = False
+
     @qc.pyqtSlot()
     def _on_logout(self):
         if not self._app.focus == self._app.FOCUS_MAIN:
             return
+
+        self.close()
+        docs = list(self._opened_docs.values())
+        for doc in docs:
+            doc.close()
 
         self._app.web_client = None
         self._app.login_window = LoginWindow(self._app)
         self._app.focus = self._app.FOCUS_LOGIN
 
         self._app.login_window.show()
-        docs = list(self._opened_docs.values())
-        for doc in docs:
-            doc.close()
-        self.close()
 
     @qc.pyqtSlot(str)
     def on_doc_closed(self, doc_id: str):
@@ -290,6 +320,10 @@ class MainWindow(qw.QMainWindow):
             self._opened_docs.pop(int(doc_id))
         else:
             logger.error('Tried to close already closed doc')
+
+    def closeEvent(self, event: qgui.QCloseEvent):
+        self._logout_from_server()
+        event.accept()
 
 
 class DocWindow(qw.QMainWindow):
