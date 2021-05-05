@@ -167,6 +167,7 @@ class Connector:
                                     (AsIs(self.users_table_name), user_login, user_id))
                 
                 self.logger.info("New user %s added to base" % user_login)
+                return True
             else:
                 sql_select_query = """select * from %s where login = '%s' and is_online = 1"""
                 self.cursor.execute(sql_select_query % (self.users_table_name, user_login))
@@ -175,7 +176,7 @@ class Connector:
                     self.logger.info("User %s is already online, access denied" % user_login)
                     return False
                 else:
-                    sql_update_query = """Update %s set %s = %s where login = %s"""
+                    sql_update_query = """Update %s set %s = %s where login = '%s'"""
                     self.cursor.execute(sql_update_query %
                                         (self.users_table_name, "is_online", 1, user_login))
                     self.logger.info("User %s is online" % user_login)
