@@ -66,7 +66,7 @@ class HTTPConnectionMock:
         elif (method, query) == ('POST', '/logout'):
             self._response_dict = {}
             self._response_code = 200
-        elif (method, query) == ('POST', '/get_doc'):
+        elif (method, query) == ('GET', '/get_doc'):
             self._response_dict = {
                 'client_version': 0,
                 'server_version': 0,

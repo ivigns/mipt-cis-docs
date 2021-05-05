@@ -13,6 +13,7 @@ from client.data_manage import stack
 from client.web import api_client
 import client.web.http_connection_mock as conn_mock
 from client.web.models.create_doc_request import CreateDocRequest
+from client.web.models.get_doc_request import GetDocRequest
 from client.web.models.update_doc_request import UpdateDocRequest
 from diff_sync import client_diff_sync as diff_sync
 from client import resources
@@ -410,20 +411,55 @@ class DocWindow(qw.QMainWindow):
         self._save_doc(force=True)
 
     def _load_doc(self):
+        text = None
         try:
-            text = self._diff_sync.db_connector.get_text()
+            response = self._app.web_client.get_doc(
+                GetDocRequest(self._user_id, self._doc_id)
+            )
+            text = response.text
+            self._diff_sync.db_connector.set_text(text)
+            self._diff_sync.db_connector.set_shadow(text)
+            self._diff_sync.db_connector.set_client_version(
+                response.client_version
+            )
+            self._diff_sync.db_connector.set_server_version(
+                response.server_version
+            )
+        except http.client.HTTPException as exc:
+            logger.exception(exc)
+            qw.QMessageBox.warning(
+                self._app.main_window,
+                'Warning',
+                'Cannot obtain actual version from server. '
+                'Using local version instead.',
+                qw.QMessageBox.StandardButton.Ok,
+            )
         except db.DbException as exc:
             logger.exception(exc)
             qw.QMessageBox.critical(
-                self,
+                self._app.main_window,
                 'Error',
-                'Cannot load doc from db',
+                'Cannot save downloaded doc to db',
                 qw.QMessageBox.StandardButton.Ok,
             )
             self.close()
             return
-        else:
-            self._textedit.setPlainText(text)
+
+        if text is None:
+            try:
+                text = self._diff_sync.db_connector.get_text()
+            except db.DbException as exc:
+                logger.exception(exc)
+                qw.QMessageBox.critical(
+                    self._app.main_window,
+                    'Error',
+                    'Cannot load doc from db',
+                    qw.QMessageBox.StandardButton.Ok,
+                )
+                self.close()
+                return
+
+        self._textedit.setPlainText(text)
 
     def _show_status(self):
         text_status = 'Saved' if self._saved else 'Unsaved changes'

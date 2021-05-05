@@ -146,7 +146,7 @@ class DbHelper:
 
     def __init__(self):
         self._db = qsql.QSqlDatabase.addDatabase('QSQLITE')
-        db_path = os.path.join(data_dir.get_data_dir(), '.docs.sqlite')
+        db_path = os.path.join(data_dir.get_data_dir(), 'docs.sqlite')
         self._db.setDatabaseName(db_path)
         if not self._db.open():
             raise DbException(f'Error while opening db')
