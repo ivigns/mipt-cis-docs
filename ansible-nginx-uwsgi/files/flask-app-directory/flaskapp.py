@@ -93,7 +93,7 @@ def get_doc():
     request_data = request.get_json()
     doc_id = int(request_data['doc_id'])
     user_id = int(request_data['user_id'])
-    doc = db_connector.get_text(doc_id, user_id)
+    doc = db_connector.get_shadow(doc_id, user_id)
     return json.dumps({'Response doc': doc}), 200
 
 
