@@ -62,8 +62,19 @@ def login():
     m = hashlib.md5()
     m.update(user_login.encode('utf-8'))
     user_id = str(int(m.hexdigest(), 16))[0:8]
-    db_connector.set_login(user_login, user_id)
-    return json.dumps({'user_id': int(user_id)}), 200
+    auth = db_connector.set_login(user_login, user_id)
+    if auth:
+        return json.dumps({'user_id': int(user_id)}), 200
+    else:
+        return jsonify(success=False), 403
+    
+    
+@app.route('/logout', methods=['POST'])
+def logout():
+    request_data = request.get_json()
+    user_login = request_data['login']
+    db_connector.logout(user_login)
+    return jsonify(success=True), 200
 
 
 @app.route('/create_doc', methods=['POST'])
@@ -93,8 +104,12 @@ def get_doc():
     request_data = request.get_json()
     doc_id = int(request_data['doc_id'])
     user_id = int(request_data['user_id'])
-    doc = db_connector.get_text(doc_id, user_id)
-    return json.dumps({'Response doc': doc}), 200
+    client_version = db_connector.get_client_version(doc_id, user_id)
+    server_version = db_connector.get_server_version(doc_id, user_id)
+    text = db_connector.get_text(doc_id, user_id)
+    return json.dumps({'client_version': client_version,
+                       'server_version': server_version,
+                       'text': text}), 200
 
 
 @app.route('/list_all_docs', methods=['GET'])
