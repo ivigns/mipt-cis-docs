@@ -337,7 +337,7 @@ def _set_cursor_pos(
 
     cursor.setPosition(0, mode)
     cursor.movePosition(
-        qgui.QTextCursor.MoveOperation.Down, mode, line,
+        qgui.QTextCursor.MoveOperation.NextBlock, mode, line,
     )
 
     column = min(column, cursor.block().length())
@@ -495,13 +495,13 @@ class DocWindow(qw.QMainWindow):
 
     def _set_text(self, text: str):
         cursor = self._textedit.textCursor()
-        cursor_pos = (cursor.blockNumber(), cursor.columnNumber())
+        cursor_pos = (cursor.blockNumber(), cursor.positionInBlock())
         cursor_anchor = None
         if cursor.hasSelection():
             cursor.setPosition(
                 cursor.anchor(), qgui.QTextCursor.MoveMode.MoveAnchor
             )
-            cursor_anchor = (cursor.blockNumber(), cursor.columnNumber())
+            cursor_anchor = (cursor.blockNumber(), cursor.positionInBlock())
 
         cursor = qgui.QTextCursor(self._textedit.document())
         cursor.select(qgui.QTextCursor.SelectionType.Document)
