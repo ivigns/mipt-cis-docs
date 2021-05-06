@@ -13,6 +13,7 @@ from client.data_manage import stack
 from client.web import api_client
 import client.web.http_connection_mock as conn_mock
 from client.web.models.create_doc_request import CreateDocRequest
+from client.web.models.get_doc_request import GetDocRequest
 from client.web.models.update_doc_request import UpdateDocRequest
 from diff_sync import client_diff_sync as diff_sync
 from client import resources
@@ -114,6 +115,14 @@ class LoginWindow(qw.QWidget):
         )
         try:
             user_id = web_client.login(login)
+        except api_client.NotAllowed:
+            qw.QMessageBox.warning(
+                self,
+                'Error',
+                'This user is already logged in. Try other user.',
+                qw.QMessageBox.StandardButton.Ok,
+            )
+            return
         except http.client.HTTPException as exc:
             logger.exception(exc)
             qw.QMessageBox.critical(
@@ -154,6 +163,7 @@ class MainWindow(qw.QMainWindow):
     def __init__(self, app: typing.Any, login: str, user_id: int, host: str):
         super().__init__()
 
+        self._login = login
         self._user_id = user_id
         self._app = app
         self._opened_docs = {}
@@ -269,20 +279,41 @@ class MainWindow(qw.QMainWindow):
 
         self._on_docs_list_update()
 
+    def _logout_from_server(self):
+        retry = True
+        while retry:
+            try:
+                self._app.web_client.logout(self._login)
+            except http.client.HTTPException as exc:
+                logger.exception(exc)
+                pressed = qw.QMessageBox.warning(
+                    self,
+                    'Warning',
+                    'Cannot log out from server',
+                    qw.QMessageBox.StandardButton.Close
+                    | qw.QMessageBox.StandardButton.Retry,
+                    qw.QMessageBox.StandardButton.Retry,
+                )
+                if pressed != qw.QMessageBox.StandardButton.Retry:
+                    retry = False
+            else:
+                retry = False
+
     @qc.pyqtSlot()
     def _on_logout(self):
         if not self._app.focus == self._app.FOCUS_MAIN:
             return
+
+        self.close()
+        docs = list(self._opened_docs.values())
+        for doc in docs:
+            doc.close()
 
         self._app.web_client = None
         self._app.login_window = LoginWindow(self._app)
         self._app.focus = self._app.FOCUS_LOGIN
 
         self._app.login_window.show()
-        docs = list(self._opened_docs.values())
-        for doc in docs:
-            doc.close()
-        self.close()
 
     @qc.pyqtSlot(str)
     def on_doc_closed(self, doc_id: str):
@@ -290,6 +321,29 @@ class MainWindow(qw.QMainWindow):
             self._opened_docs.pop(int(doc_id))
         else:
             logger.error('Tried to close already closed doc')
+
+    def closeEvent(self, event: qgui.QCloseEvent):
+        self._logout_from_server()
+        event.accept()
+
+
+def _set_cursor_pos(
+    position_tuple: typing.Tuple[int, int],
+    mode: qgui.QTextCursor.MoveMode,
+    cursor: qgui.QTextCursor,
+):
+    line = position_tuple[0]
+    column = position_tuple[1]
+
+    cursor.setPosition(0, mode)
+    cursor.movePosition(
+        qgui.QTextCursor.MoveOperation.NextBlock, mode, line,
+    )
+
+    column = min(column, cursor.block().length())
+    cursor.movePosition(
+        qgui.QTextCursor.MoveOperation.Right, mode, column,
+    )
 
 
 class DocWindow(qw.QMainWindow):
@@ -376,20 +430,55 @@ class DocWindow(qw.QMainWindow):
         self._save_doc(force=True)
 
     def _load_doc(self):
+        text = None
         try:
-            text = self._diff_sync.db_connector.get_text()
+            response = self._app.web_client.get_doc(
+                GetDocRequest(self._user_id, self._doc_id)
+            )
+            text = response.text
+            self._diff_sync.db_connector.set_text(text)
+            self._diff_sync.db_connector.set_shadow(text)
+            self._diff_sync.db_connector.set_client_version(
+                response.client_version
+            )
+            self._diff_sync.db_connector.set_server_version(
+                response.server_version
+            )
+        except http.client.HTTPException as exc:
+            logger.exception(exc)
+            qw.QMessageBox.warning(
+                self._app.main_window,
+                'Warning',
+                'Cannot obtain actual version from server. '
+                'Using local version instead.',
+                qw.QMessageBox.StandardButton.Ok,
+            )
         except db.DbException as exc:
             logger.exception(exc)
             qw.QMessageBox.critical(
-                self,
+                self._app.main_window,
                 'Error',
-                'Cannot load doc from db',
+                'Cannot save downloaded doc to db',
                 qw.QMessageBox.StandardButton.Ok,
             )
             self.close()
             return
-        else:
-            self._textedit.setPlainText(text)
+
+        if text is None:
+            try:
+                text = self._diff_sync.db_connector.get_text()
+            except db.DbException as exc:
+                logger.exception(exc)
+                qw.QMessageBox.critical(
+                    self._app.main_window,
+                    'Error',
+                    'Cannot load doc from db',
+                    qw.QMessageBox.StandardButton.Ok,
+                )
+                self.close()
+                return
+
+        self._textedit.setPlainText(text)
 
     def _show_status(self):
         text_status = 'Saved' if self._saved else 'Unsaved changes'
@@ -406,10 +495,13 @@ class DocWindow(qw.QMainWindow):
 
     def _set_text(self, text: str):
         cursor = self._textedit.textCursor()
-        cursor_pos = cursor.position()
+        cursor_pos = (cursor.blockNumber(), cursor.positionInBlock())
         cursor_anchor = None
         if cursor.hasSelection():
-            cursor_anchor = cursor.anchor()
+            cursor.setPosition(
+                cursor.anchor(), qgui.QTextCursor.MoveMode.MoveAnchor
+            )
+            cursor_anchor = (cursor.blockNumber(), cursor.positionInBlock())
 
         cursor = qgui.QTextCursor(self._textedit.document())
         cursor.select(qgui.QTextCursor.SelectionType.Document)
@@ -417,15 +509,15 @@ class DocWindow(qw.QMainWindow):
 
         new_cursor = self._textedit.textCursor()
         if cursor_anchor is not None:
-            new_cursor.setPosition(
-                cursor_anchor, qgui.QTextCursor.MoveMode.MoveAnchor
+            _set_cursor_pos(
+                cursor_anchor, qgui.QTextCursor.MoveMode.MoveAnchor, new_cursor
             )
-            new_cursor.setPosition(
-                cursor_pos, qgui.QTextCursor.MoveMode.KeepAnchor
+            _set_cursor_pos(
+                cursor_pos, qgui.QTextCursor.MoveMode.KeepAnchor, new_cursor
             )
         else:
-            new_cursor.setPosition(
-                cursor_pos, qgui.QTextCursor.MoveMode.MoveAnchor
+            _set_cursor_pos(
+                cursor_pos, qgui.QTextCursor.MoveMode.MoveAnchor, new_cursor
             )
         self._textedit.setTextCursor(new_cursor)
 

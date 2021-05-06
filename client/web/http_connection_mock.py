@@ -59,6 +59,19 @@ class HTTPConnectionMock:
         body = json.loads(json_body)
         if (method, query) == ('POST', '/login'):
             self._response_dict = {'user_id': 5316191164430650570}
+            if random.randint(0, 100) % 3 == 0:
+                self._response_code = 403
+            else:
+                self._response_code = 200
+        elif (method, query) == ('POST', '/logout'):
+            self._response_dict = {}
+            self._response_code = 200
+        elif (method, query) == ('GET', '/get_doc'):
+            self._response_dict = {
+                'client_version': 0,
+                'server_version': 0,
+                'text': 'Sample text',
+            }
             self._response_code = 200
         elif (method, query) == ('POST', '/update_doc'):
             self._response_dict = {
