@@ -17,7 +17,7 @@ If app does not start (which is an unusual case), you need to build it by yourse
 
 # UI overview
 
-After launching the application, you will see a login screen where you need to enter your username.
+After launching the application, you will see a login screen where you need to enter your username and the host.
 
 <img src="media/login.png" alt="login" width="600"/>
 
