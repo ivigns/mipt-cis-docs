@@ -289,13 +289,24 @@ class MainWindow(qw.QMainWindow):
                 pressed = qw.QMessageBox.warning(
                     self,
                     'Warning',
-                    'Cannot log out from server',
+                    'Cannot log out from server. Please retry.',
                     qw.QMessageBox.StandardButton.Close
                     | qw.QMessageBox.StandardButton.Retry,
                     qw.QMessageBox.StandardButton.Retry,
                 )
                 if pressed != qw.QMessageBox.StandardButton.Retry:
-                    retry = False
+                    pressed = qw.QMessageBox.warning(
+                        self,
+                        'Warning',
+                        'If you close now, you may not enter the server again '
+                        'with this login! Are you sure you want to quit the '
+                        'application?',
+                        qw.QMessageBox.StandardButton.Close
+                        | qw.QMessageBox.StandardButton.Retry,
+                        qw.QMessageBox.StandardButton.Retry,
+                    )
+                    if pressed != qw.QMessageBox.StandardButton.Retry:
+                        retry = False
             else:
                 retry = False
 
@@ -361,13 +372,12 @@ class DocWindow(qw.QMainWindow):
         self._user_id = user_id
         self._saved = False
         self._status_message = None
+        self._textedit = qw.QTextEdit()
         db_connector = self._app.db_helper.get_connector(user_id, doc_id)
+        self._load_doc(db_connector)
         self._diff_sync = diff_sync.ClientDiffSync(
             db_connector, stack.Stack([])
         )
-
-        self._textedit = qw.QTextEdit()
-        self._load_doc()
 
         layout = qw.QVBoxLayout()
         layout.addWidget(self._textedit)
@@ -429,21 +439,17 @@ class DocWindow(qw.QMainWindow):
         self.show()
         self._save_doc(force=True)
 
-    def _load_doc(self):
+    def _load_doc(self, db_connector: db.DbConnector):
         text = None
         try:
             response = self._app.web_client.get_doc(
                 GetDocRequest(self._user_id, self._doc_id)
             )
             text = response.text
-            self._diff_sync.db_connector.set_text(text)
-            self._diff_sync.db_connector.set_shadow(text)
-            self._diff_sync.db_connector.set_client_version(
-                response.client_version
-            )
-            self._diff_sync.db_connector.set_server_version(
-                response.server_version
-            )
+            db_connector.set_text(text)
+            db_connector.set_shadow(text)
+            db_connector.set_client_version(response.client_version)
+            db_connector.set_server_version(response.server_version)
         except http.client.HTTPException as exc:
             logger.exception(exc)
             qw.QMessageBox.warning(
@@ -466,7 +472,7 @@ class DocWindow(qw.QMainWindow):
 
         if text is None:
             try:
-                text = self._diff_sync.db_connector.get_text()
+                text = db_connector.get_text()
             except db.DbException as exc:
                 logger.exception(exc)
                 qw.QMessageBox.critical(
