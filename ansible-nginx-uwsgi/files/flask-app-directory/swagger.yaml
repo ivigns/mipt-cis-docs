@@ -1,0 +1,336 @@
+swagger: "2.0"
+info:
+  description: mipt-cis-docs server API
+  version: 1.0.0
+  title: mipt-cis-docs API
+host: 34.159.101.203:80
+schemes:
+- http
+paths:
+  /login:
+    post:
+      tags:
+      - API
+      summary: Start user session, exchange user login on user_id
+      operationId: login
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          additionalProperties: false
+          properties:
+            login:
+              description: User name
+              type: string
+          required:
+          - login
+      responses:
+        200:
+          description: OK
+          schema:
+            type: object
+            additionalProperties: false
+            properties:
+              user_id:
+                description: Unique user id
+                type: integer
+                format: int64
+            required:
+            - user_id
+        403:
+          description: Forbidden (user already logged in)
+          schema:
+            $ref: "#/definitions/Error"
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: "#/definitions/Error"
+  /logout:
+    post:
+      tags:
+      - API
+      summary: End user session
+      operationId: logout
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          additionalProperties: false
+          properties:
+            login:
+              description: User name
+              type: string
+          required:
+          - login
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/Success"
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: "#/definitions/Error"
+  /create_doc:
+    post:
+      tags:
+      - API
+      summary: Create new document
+      operationId: create_doc
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          additionalProperties: false
+          properties:
+            title:
+              description: Document title
+              type: array
+              items:
+                type: string
+            doc_id:
+              description: Document id
+              type: integer
+              format: int64
+            user_id:
+              description: User id
+              type: integer
+              format: int64
+          required:
+          - title
+          - doc_id
+          - user_id
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/Success"
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: "#/definitions/Error"
+  /update_doc:
+    post:
+      tags:
+      - API
+      summary: Update document
+      operationId: update_doc
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          additionalProperties: false
+          properties:
+            edits:
+              description: List of client edits in special format
+              type: array
+              items:
+                type: string
+            version:
+              description: Current local version of the document
+              type: integer
+              format: int64
+            doc_id:
+              description: Document id
+              type: integer
+              format: int64
+            user_id:
+              description: User id
+              type: integer
+              format: int64
+          required:
+          - edits
+          - version
+          - doc_id
+          - user_id
+      responses:
+        200:
+          description: OK
+          schema:
+            type: object
+            additionalProperties: false
+            properties:
+              edits:
+                description: List of server edits in special format
+                type: array
+                items:
+                  type: string
+              version:
+                description: New version of the document
+                type: integer
+                format: int64
+            required:
+            - edits
+            - version
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: "#/definitions/Error"
+  /get_doc:
+    get:
+      tags:
+      - API
+      summary: Get document
+      operationId: get_doc
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          additionalProperties: false
+          properties:
+            doc_id:
+              description: Document id
+              type: integer
+              format: int64
+            user_id:
+              description: User id
+              type: integer
+              format: int64
+          required:
+          - doc_id
+          - user_id
+      responses:
+        200:
+          description: OK
+          schema:
+            type: object
+            additionalProperties: false
+            properties:
+              text:
+                description: Document text for the client
+                type: string
+              client_version:
+                description: Client version of the document
+                type: integer
+                format: int64
+              server_version:
+                description: Server version of the document
+                type: integer
+                format: int64
+            required:
+            - text
+            - client_version
+            - server_version
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: "#/definitions/Error"
+  /list_all_docs:
+    get:
+      tags:
+      - API
+      summary: List all documents
+      operationId: list_all_docs
+      produces:
+      - application/json
+      responses:
+        200:
+          description: OK
+          schema:
+            type: object
+            additionalProperties: false
+            properties:
+              docs:
+                description: List of documents
+                type: array
+                items:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    title:
+                      description: Document title
+                      type: array
+                      items:
+                        type: string
+                    doc_id:
+                      description: Document id
+                      type: integer
+                      format: int64
+                  required:
+                  - title
+                  - doc_id
+            required:
+            - docs
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: "#/definitions/Error"
+  /logs:
+    get:
+      tags:
+      - Debug
+      summary: List server logs from service start
+      operationId: return_logs
+      produces:
+      - text/plain
+      responses:
+        200:
+          description: OK
+          schema:
+            type: string
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: "#/definitions/Error"
+  /health:
+    get:
+      tags:
+      - Debug
+      summary: Check service health
+      operationId: return_health
+      produces:
+      - application/json
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: "#/definitions/Success"
+definitions:
+  Success:
+    type: object
+    properties:
+      success:
+        description: Operation successful
+        type: boolean
+    additionalProperties: false
+    required:
+    - success
+  Error:
+    type: object
+    properties:
+      message:
+        description: Error message
+        type: string
+    additionalProperties: false
+    required:
+    - message

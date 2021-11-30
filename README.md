@@ -15,6 +15,17 @@ At first run you will be proposed to enter host and port of our server. Currentl
 
 If app does not start (which is an unusual case), you need to build it by yourself for your version of OS. See **Build Application** section below.
 
+# Server startup
+
+Server is running on Google Cloud instance with Debian 10 "buster". Swagger schema awailable [here](ansible-nginx-uwsgi/files/flask-app-directory/swagger.yaml).
+
+Ansible configuration was adapted only for Debian 10. You can try to run configuration locally or inside a container, however nothing is guarateed to work from scratch. To run a server on a new remote container, change the host in `ansible-nginx-uwsgi/hosts`. By default the configuration will run on port `80`. After this run the command below (Ansible required):
+```bash
+ansible-playbook ansible-nginx-uwsgi/nginx-uwsgi.yml -i ansible-nginx-uwsgi/hosts
+```
+
+After all, the server will be ready for the work with clients.
+
 # UI overview
 
 After launching the application, you will see a login screen where you need to enter your username and the host.
