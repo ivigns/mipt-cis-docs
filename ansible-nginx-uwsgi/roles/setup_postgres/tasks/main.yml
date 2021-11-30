@@ -4,7 +4,7 @@
 
 - name: Install required system packages
   apt: name={{ item }} state=latest update_cache=yes
-  loop: ['acl', 'apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common', 'python3-pip', 'virtualenv', 'python3-setuptools', 'python3-psycopg2']
+  loop: ['acl', 'apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common', 'python3-pip', 'virtualenv', 'python3-setuptools', 'python3-psycopg2', 'postgresql', 'libpq-dev']
 
 - name: Add Docker GPG apt Key
   apt_key:
@@ -15,6 +15,14 @@
   apt_repository:
     repo: deb https://download.docker.com/linux/ubuntu bionic stable
     state: present
+
+- name: Download containerd.io
+  command: >
+    curl -O https://download.docker.com/linux/debian/dists/buster/pool/stable/amd64/containerd.io_1.4.3-1_amd64.deb
+
+- name: Install containerd.io
+  command: >
+    sudo apt install ./containerd.io_1.4.3-1_amd64.deb
 
 - name: Update apt and install docker-ce
   apt: update_cache=yes name=docker-ce state=latest
