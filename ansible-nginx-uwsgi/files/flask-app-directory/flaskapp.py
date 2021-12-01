@@ -3,6 +3,7 @@ import json
 import psycopg2
 import hashlib
 import logging
+from functools import wraps
 
 from flask import Flask, jsonify, request, Response
 from connector import Connector
@@ -60,16 +61,16 @@ db_connector.check_users_table()
 
 
 def wrap_handler(handler):
+    @wraps(handler)
     def wrapped():
         app.logger.info('Start handling %s', handler.__name__)
         try:
-            response, status_code = handler()
+            response = handler()
         except Exception as exc:
             app.logger.exception('Handling failed: %s', exc)
-            response = json.dumps({'message': 'Internal error'})
-            status_code = 500
+            response = json.dumps({'message': 'Internal error'}), 500
         app.logger.info('Stop handling %s', handler.__name__)
-        return response, status_code
+        return response
 
     return wrapped
 
@@ -173,7 +174,6 @@ def return_health():
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
-@wrap_handler
 def catch_all(path):
     return json.dumps({'message': 'Path not found'}), 404
 
