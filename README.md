@@ -7,7 +7,7 @@ Application is a desktop client that can be run on Windows, Linux and Mac; and a
 
 # Setup and First Run
 
-Latest standalone application is available for download at [repository releases](https://github.com/ivigns/mipt-cis-docs/releases).
+Latest portable application is available for download at [repository releases](https://github.com/ivigns/mipt-cis-docs/releases).
 
 At first run you will be proposed to enter host and port of our server. Currently available server:
  - Host: **34.159.101.203**
