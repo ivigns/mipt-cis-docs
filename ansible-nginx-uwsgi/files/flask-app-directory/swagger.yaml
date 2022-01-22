@@ -3,7 +3,7 @@ info:
   description: mipt-cis-docs server API
   version: 1.0.0
   title: mipt-cis-docs API
-host: 34.159.101.203:80
+host: 35.207.167.59:80
 schemes:
 - http
 paths:

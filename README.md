@@ -10,7 +10,7 @@ Application is a desktop client that can be run on Windows, Linux and Mac; and a
 Latest portable application is available for download at [repository releases](https://github.com/ivigns/mipt-cis-docs/releases).
 
 At first run you will be proposed to enter host and port of our server. Currently available server:
- - Host: **34.159.101.203**
+ - Host: **35.207.167.59**
  - Port: **80**
 
 If app does not start (which is an unusual case), you need to build it by yourself for your version of OS. See **Build Application** section below.
